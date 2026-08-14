@@ -77,7 +77,8 @@ forgotForm.addEventListener("submit", async (event) => {
     const result = await api.post("/api/auth/forgot-password", { identity: document.getElementById("identity").value });
     feedback(feedbackElement, result.message);
   } catch (error) {
-    feedback(feedbackElement, error.code === "SMTP_NOT_CONFIGURED"
+    const unavailable = ["SMTP_NOT_CONFIGURED", "PASSWORD_RECOVERY_UNAVAILABLE"].includes(error.code);
+    feedback(feedbackElement, unavailable
       ? "A recuperação por e-mail está temporariamente indisponível. Solicite a um administrador a redefinição da senha."
       : error.message, true);
   } finally { button.disabled = false; }

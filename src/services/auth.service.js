@@ -61,8 +61,8 @@ export const authService = {
   async requestPasswordReset({ identity }) {
     if (!config.smtp.host || !config.smtp.from) {
       throw new AppError(
-        "SMTP_NOT_CONFIGURED",
-        "A recuperação de senha não está configurada. Informe SMTP_HOST e SMTP_FROM no arquivo .env.",
+        "PASSWORD_RECOVERY_UNAVAILABLE",
+        "A recuperação de senha está temporariamente indisponível. Procure um administrador.",
         503,
       );
     }

@@ -6,6 +6,7 @@ import { auditRepository } from "../repositories/audit.repository.js";
 import { hashPassword } from "../security/password.js";
 import { AppError } from "../utils/app-error.js";
 import { isValidCpf, maskCpf, normalizeCpf } from "../utils/cpf.js";
+import { isValidCnpjFormat, normalizeCnpj } from "../utils/cnpj.js";
 import { booleanValue, nonNegativeMoney, optionalString, positiveId, requiredString } from "../validators/common.js";
 import { paginationMeta, parsePagination } from "../utils/pagination.js";
 
@@ -132,8 +133,12 @@ export const adminService = {
       if (!input.hotel || typeof input.hotel !== "object" || Array.isArray(input.hotel)) throw new AppError("VALIDATION_ERROR", "Os dados do hotel não são válidos.");
       const email = optionalString(input.hotel.email, "E-mail", { max: 190 });
       if (email && !/^\S+@\S+\.\S+$/.test(email)) throw new AppError("INVALID_EMAIL", "O e-mail do hotel não é válido.");
+      const cnpj = normalizeCnpj(input.hotel.cnpj);
+      if (cnpj && !isValidCnpjFormat(cnpj)) {
+        throw new AppError("INVALID_CNPJ", "O CNPJ deve possuir 14 posições; as 12 primeiras podem conter letras ou números e as duas últimas devem ser numéricas.");
+      }
       const checkInTime = String(input.hotel.checkInTime || "14:00");
-      const checkOutTime = String(input.hotel.checkOutTime || "11:00");
+      const checkOutTime = String(input.hotel.checkOutTime || "12:00");
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(checkInTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(checkOutTime)) throw new AppError("VALIDATION_ERROR", "Os horários de check-in e check-out devem usar HH:MM.");
       const timezone = requiredString(input.hotel.timezone || "America/Sao_Paulo", "Fuso horário", { max: 100 });
       try { new Intl.DateTimeFormat("pt-BR", { timeZone: timezone }).format(); } catch { throw new AppError("VALIDATION_ERROR", "O fuso horário informado não é válido."); }
@@ -147,12 +152,15 @@ export const adminService = {
       }
       normalized.hotel = {
         name: requiredString(input.hotel.name, "Nome do hotel", { min: 2, max: 160 }),
+        legalName: optionalString(input.hotel.legalName, "Razão social", { max: 180 }) || "",
+        cnpj,
         phone: optionalString(input.hotel.phone, "Telefone", { max: 30 }) || "",
         email: email || "",
         address: optionalString(input.hotel.address, "Endereço", { max: 500 }) || "",
         checkInTime,
         checkOutTime,
         cleaningEstimateMinutes,
+        hostingTerms: optionalString(input.hotel.hostingTerms, "Condições de hospedagem", { max: 5000 }) || "",
         privacyNotice: optionalString(input.hotel.privacyNotice, "Aviso de privacidade", { max: 2000 }) || "",
         currency,
         timezone,
