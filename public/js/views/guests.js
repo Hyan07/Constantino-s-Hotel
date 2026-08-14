@@ -6,9 +6,8 @@ import { currency, debounce, escapeHtml, initials, longDate, statusLabel } from 
 const state = { q: "", page: 1 };
 
 function guestFields(guest = {}) {
-  const hasStoredCpf = Boolean(guest.id && guest.has_cpf);
   return `<div class="field span-2"><label>Nome completo *</label><input name="name" value="${escapeHtml(guest.name || "")}" required minlength="3" maxlength="180" autocomplete="name"></div>
-    <div class="field"><label>CPF <span class="muted">(opcional)</span></label><input name="cpf" value="" inputmode="numeric" autocomplete="off" placeholder="${hasStoredCpf ? "CPF cadastrado — deixe em branco para manter" : "Somente números"}">${hasStoredCpf ? `<small class="muted">O CPF atual permanece protegido e não é exibido.</small>` : ""}</div>
+    <div class="field"><label>CPF <span class="muted">(opcional)</span></label><input name="cpf" value="${escapeHtml(guest.cpf || "")}" inputmode="numeric" autocomplete="off" placeholder="Somente números"></div>
     <div class="field"><label>Telefone <span class="muted">(opcional)</span></label><input name="phone" value="${escapeHtml(guest.phone || "")}" autocomplete="tel"></div>
     <div class="field span-2"><label>E-mail <span class="muted">(opcional)</span></label><input name="email" type="email" value="${escapeHtml(guest.email || "")}" autocomplete="email"></div>`;
 }
