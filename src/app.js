@@ -47,7 +47,7 @@ export function createApp() {
       crossOriginEmbedderPolicy: false,
     }),
   );
-  if (["development", "staging"].includes(config.env)) {
+  if (["development", "staging", "test"].includes(config.env)) {
     app.use((_req, res, next) => {
       res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
       next();
