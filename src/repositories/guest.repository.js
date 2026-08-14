@@ -11,7 +11,7 @@ export const guestRepository = {
     const params = q ? [term, cpfTerm, term, term] : [];
     const [[count]] = await getPool().execute(`SELECT COUNT(*) AS total FROM guests g ${where}`, params);
     const [rows] = await getPool().execute(
-      `SELECT g.id, g.name, g.cpf, g.phone, g.email, g.city, g.state,
+      `SELECT g.id, g.name, g.cpf, g.phone, g.email,
         MAX(r.check_in_date) AS last_stay,
         COUNT(DISTINCT r.id) AS reservation_count,
         COALESCE(SUM(CASE WHEN r.status IN ('checked_in','completed') THEN r.nights ELSE 0 END), 0) AS total_nights
@@ -65,25 +65,16 @@ export const guestRepository = {
 
   async create(data, connection = getPool()) {
     const [result] = await connection.execute(
-      `INSERT INTO guests
-        (name, cpf, birth_date, phone, email, postal_code, street, street_number, complement, neighborhood, city, state, notes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.name, data.cpf, data.birthDate, data.phone, data.email, data.postalCode, data.street,
-        data.streetNumber, data.complement, data.neighborhood, data.city, data.state, data.notes,
-      ],
+      "INSERT INTO guests (name, cpf, phone, email) VALUES (?, ?, ?, ?)",
+      [data.name, data.cpf, data.phone, data.email],
     );
     return result.insertId;
   },
 
   async update(id, data, connection = getPool()) {
     await connection.execute(
-      `UPDATE guests SET name=?, cpf=?, birth_date=?, phone=?, email=?, postal_code=?, street=?, street_number=?,
-        complement=?, neighborhood=?, city=?, state=?, notes=?, active=? WHERE id=?`,
-      [
-        data.name, data.cpf, data.birthDate, data.phone, data.email, data.postalCode, data.street,
-        data.streetNumber, data.complement, data.neighborhood, data.city, data.state, data.notes, data.active, id,
-      ],
+      "UPDATE guests SET name=?, cpf=?, phone=?, email=? WHERE id=?",
+      [data.name, data.cpf, data.phone, data.email, id],
     );
   },
 };
