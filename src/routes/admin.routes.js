@@ -1,0 +1,22 @@
+import { Router } from "express";
+import { adminController } from "../controllers/admin.controller.js";
+import { asyncHandler } from "../utils/async-handler.js";
+import { requirePermission } from "../middleware/authentication.js";
+
+const router = Router();
+const admin = requirePermission("administration.write");
+router.get("/rooms", admin, asyncHandler(adminController.rooms));
+router.get("/users", admin, asyncHandler(adminController.users));
+router.post("/users", admin, asyncHandler(adminController.createUser));
+router.put("/users/:id", admin, asyncHandler(adminController.updateUser));
+router.post("/users/:id/reset-password", admin, asyncHandler(adminController.resetUserPassword));
+router.get("/roles", admin, asyncHandler(adminController.roles));
+router.get("/categories", admin, asyncHandler(adminController.categories));
+router.post("/categories", admin, asyncHandler(adminController.createCategory));
+router.put("/categories/:id", admin, asyncHandler(adminController.updateCategory));
+router.get("/settings", admin, asyncHandler(adminController.settings));
+router.put("/settings", admin, asyncHandler(adminController.updateSettings));
+router.get("/audit", requirePermission("audit.read"), asyncHandler(adminController.audit));
+router.post("/rooms", admin, asyncHandler(adminController.createRoom));
+router.put("/rooms/:id", admin, asyncHandler(adminController.updateRoom));
+export default router;

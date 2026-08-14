@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Acesso ao sistema de gestão do Constantino's Hotel">
+    <title>Entrar · Constantino's Hotel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/tokens.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="/css/typography.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/pages/login.css">
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-card" aria-labelledby="login-title">
+        <div id="environment-badge" class="environment-badge" hidden>AMBIENTE DE DESENVOLVIMENTO</div>
+        <p class="eyebrow">Gestão hoteleira</p>
+        <h1 id="login-title">Constantino's Hotel</h1>
+        <p class="login-intro">Acesse o ambiente de gestão do hotel.</p>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label for="cpf">CPF</label>
+            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="username" placeholder="000.000.000-00" maxlength="14" required>
+            <span class="field-error" id="cpf-error" role="alert"></span>
+          </div>
+          <div class="field">
+            <label for="password">Senha</label>
+            <div class="password-field">
+              <input id="password" name="password" type="password" autocomplete="current-password" required>
+              <button class="icon-button" type="button" id="toggle-password" aria-label="Mostrar senha" title="Mostrar senha">
+                <i data-lucide="eye" aria-hidden="true"></i>
+              </button>
+            </div>
+            <span class="field-error" id="password-error" role="alert"></span>
+          </div>
+          <div id="login-error" class="form-alert form-alert--danger" role="alert" hidden></div>
+          <button class="link-button login-help" type="button" id="forgot-button">Esqueci minha senha</button>
+          <button class="button button--primary button--block" type="submit" id="login-submit">
+            <span>Entrar</span>
+          </button>
+        </form>
+
+        <form id="forgot-form" class="auth-secondary-form" hidden novalidate>
+          <h2>Recuperar senha</h2>
+          <p>Informe seu CPF ou e-mail. Se o cadastro estiver habilitado, enviaremos um link seguro.</p>
+          <div class="field">
+            <label for="identity">CPF ou e-mail</label>
+            <input id="identity" name="identity" autocomplete="username" required>
+          </div>
+          <div id="forgot-feedback" class="form-alert" role="status" hidden></div>
+          <button class="button button--primary button--block" type="submit">Enviar instruções</button>
+          <button class="button button--ghost button--block" type="button" data-back-login>Voltar</button>
+        </form>
+
+        <form id="reset-form" class="auth-secondary-form" hidden novalidate>
+          <h2>Criar nova senha</h2>
+          <p>Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.</p>
+          <div class="field">
+            <label for="new-password">Nova senha</label>
+            <input id="new-password" name="password" type="password" autocomplete="new-password" required minlength="12">
+          </div>
+          <div class="field">
+            <label for="confirm-password">Confirmar senha</label>
+            <input id="confirm-password" name="confirmation" type="password" autocomplete="new-password" required minlength="12">
+          </div>
+          <div id="reset-feedback" class="form-alert" role="alert" hidden></div>
+          <button class="button button--primary button--block" type="submit">Redefinir senha</button>
+          <button class="button button--ghost button--block" type="button" data-back-login>Voltar</button>
+        </form>
+      </section>
+      <p class="login-footer">Constantino's Hotel · Passos, MG</p>
+    </main>
+    <script src="/vendor/lucide.min.js"></script>
+    <script type="module" src="/js/login.js"></script>
+  </body>
+</html>

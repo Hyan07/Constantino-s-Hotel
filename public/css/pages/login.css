@@ -1,0 +1,18 @@
+.login-page { background: var(--brand-950); color: var(--text-primary); }
+.login-page::before, .login-page::after { content: ""; position: fixed; width: 430px; height: 430px; border: 1px solid rgb(142 171 195 / 7%); border-radius: 50%; pointer-events: none; }
+.login-page::before { left: -170px; bottom: -120px; }
+.login-page::after { right: -120px; top: -180px; width: 560px; height: 560px; }
+.login-shell { position: relative; z-index: 1; display: grid; place-items: center; min-height: 100vh; padding: 32px 20px 64px; }
+.login-card { width: min(430px, 100%); padding: 38px 38px 34px; border-radius: var(--radius-lg); background: white; box-shadow: 0 22px 60px rgb(0 0 0 / 18%); }
+.login-card h1 { margin-bottom: 10px; color: var(--brand-950); font-size: 2.2rem; }
+.login-intro { margin-bottom: 28px; color: var(--text-secondary); }
+.login-card form { display: grid; gap: 16px; }
+.password-field { position: relative; }
+.password-field input { padding-right: 44px; }
+.password-field .icon-button { position: absolute; top: 3px; right: 3px; }
+.login-help { justify-self: end; margin-top: -4px; }
+.environment-badge { margin: -10px 0 24px; padding: 7px 9px; border: 1px solid rgb(164 119 53 / 22%); border-radius: var(--radius-sm); background: var(--warning-bg); color: var(--warning); font-size: 0.61rem; font-weight: 800; letter-spacing: 0.08em; text-align: center; }
+.auth-secondary-form h2 { margin-bottom: -8px; color: var(--brand-900); font-family: "DM Serif Display", Georgia, serif; font-size: 1.7rem; font-weight: 400; }
+.auth-secondary-form > p { color: var(--text-secondary); font-size: 0.76rem; }
+.login-footer { position: fixed; bottom: 20px; margin: 0; color: var(--brand-400); font-size: 0.68rem; }
+@media (max-width: 520px) { .login-card { padding: 30px 24px; } .login-card h1 { font-size: 1.9rem; } }

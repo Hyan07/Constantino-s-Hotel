@@ -1,0 +1,38 @@
+{
+  "name": "constantinos-hotel-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de gestão hoteleira do Constantino's Hotel",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "predev": "node scripts/migrate.js",
+    "dev": "node --watch src/server.js",
+    "prestart": "node scripts/migrate.js",
+    "start": "node src/server.js",
+    "setup:local": "node scripts/setup-local.js",
+    "migrate": "node scripts/migrate.js",
+    "migrate:status": "node scripts/migrate-status.js",
+    "seed:dev": "node scripts/seed-dev.js",
+    "lint": "eslint .",
+    "test": "node --test \"tests/unit/*.test.js\" \"tests/integration/*.test.js\"",
+    "test:e2e": "node --test \"tests/e2e/*.test.js\"",
+    "test:all": "npm run lint && npm test && npm run test:e2e",
+    "check": "node scripts/check-project.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^8.1.0",
+    "lucide": "^0.468.0",
+    "mysql2": "^3.14.4",
+    "nodemailer": "^7.0.5"
+  },
+  "devDependencies": {
+    "eslint": "^9.33.0"
+  }
+}

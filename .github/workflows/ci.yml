@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root_test_only
+          MYSQL_DATABASE: constantinos_hotel_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot_test_only"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      APP_ENV: test
+      PORT: 3000
+      APP_URL: http://localhost:3000
+      APP_TIMEZONE: America/Sao_Paulo
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: constantinos_hotel_test
+      DB_USER: root
+      DB_PASSWORD: root_test_only
+      SESSION_SECRET: ci_apenas_chave_aleatoria_com_mais_de_32_caracteres
+      INITIAL_ADMIN_NAME: Administrador CI
+      INITIAL_ADMIN_CPF: 52998224725
+      INITIAL_ADMIN_EMAIL: ci@example.invalid
+      INITIAL_ADMIN_PASSWORD: SenhaCI!2026Segura
+      RUN_DB_TESTS: true
+      RUN_E2E: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: cp .env.example .env
+      - run: npm run setup:local
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:e2e
