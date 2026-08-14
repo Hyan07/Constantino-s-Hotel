@@ -30,6 +30,12 @@ function guestAddress(item) {
   return [street, item.guest_complement, location, item.guest_postal_code ? `CEP ${item.guest_postal_code}` : ""].filter(Boolean).join(" · ") || "Não informado";
 }
 
+function formattedCpf(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length !== 11) return value || "Não informado";
+  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
 function printableStayDocument(item, settings) {
   const hotel = settings?.hotel || {};
   const hotelName = hotel.name || "Constantino's Hotel";
@@ -46,7 +52,7 @@ function printableStayDocument(item, settings) {
 
   const printWindow = window.open("", "_blank", "width=980,height=760");
   if (!printWindow) {
-    toast("Permita pop-ups para imprimir o termo de hospedagem.", { title: "Impressão bloqueada", type: "danger" });
+    toast("Permita pop-ups para imprimir o contrato de hospedagem.", { title: "Impressão bloqueada", type: "danger" });
     return;
   }
 
@@ -117,7 +123,7 @@ function printableStayDocument(item, settings) {
       <h3>1. Hóspede responsável</h3>
       <div class="grid">
         <div class="field"><span>Nome</span><strong>${safe(item.guest_name)}</strong></div>
-        <div class="field"><span>CPF</span><strong>${safe(item.guest_cpf, "Não informado")}</strong></div>
+        <div class="field"><span>CPF</span><strong>${safe(formattedCpf(item.guest_cpf_document || item.guest_cpf), "Não informado")}</strong></div>
         <div class="field"><span>Telefone</span><strong>${safe(item.guest_phone, "Não informado")}</strong></div>
         <div class="field"><span>E-mail</span><strong>${safe(item.guest_email, "Não informado")}</strong></div>
         <div class="field span-2"><span>Endereço</span><strong>${safe(guestAddress(item))}</strong></div>
@@ -201,7 +207,7 @@ async function openStay(id) {
       <h3 class="section-title">Conta</h3><div class="detail-grid">${detail("Hospedagem", currency(item.lodging_amount))}${detail("Consumos", currency(item.charges_amount))}${detail("Pago", currency(item.paid_amount))}${detail("Saldo", currency(item.balance))}</div>
       <h3 class="section-title">Lançamentos</h3>${item.charges.length ? `<div class="timeline-list">${item.charges.map((charge) => `<div class="timeline-item"><strong>${escapeHtml(charge.description)} · ${currency(charge.total_amount)}</strong><span>${dateTime(charge.charged_at)} · ${charge.quantity} × ${currency(charge.unit_price)}</span></div>`).join("")}</div>` : `<p class="muted">Nenhum consumo lançado.</p>`}
       <h3 class="section-title">Pagamentos</h3>${item.payments.length ? `<div class="timeline-list">${item.payments.map((payment) => `<div class="timeline-item"><strong>${currency(payment.amount)} · ${escapeHtml(payment.payment_method)}</strong><span>${dateTime(payment.paid_at)} · ${escapeHtml(payment.user_name)}</span></div>`).join("")}</div>` : `<p class="muted">Nenhum pagamento registrado.</p>`}`,
-    footer: `<button class="button button--secondary" data-print-contract><i data-lucide="printer"></i>Imprimir termo</button>${stayActions}`,
+    footer: `<button class="button button--secondary" data-print-contract><i data-lucide="printer"></i>Imprimir contrato</button>${stayActions}`,
     onMount(element, close) {
       element.querySelector("[data-print-contract]").addEventListener("click", () => printableStayDocument(item, settings));
       element.querySelector("[data-charge]")?.addEventListener("click", () => formModal({ title: "Adicionar consumo", content: `<div class="form-grid"><div class="field span-2"><label>Descrição *</label><input name="description" required maxlength="190" placeholder="Ex.: Frigobar"></div><div class="field"><label>Quantidade *</label><input name="quantity" type="number" min="0.01" step="0.01" value="1" required></div><div class="field"><label>Valor unitário *</label><input name="unitPrice" type="number" min="0.01" step="0.01" required></div></div>`, saveLabel: "Adicionar", onSave: async (data) => { await api.post(`/api/stays/${id}/charges`, data); toast("Consumo adicionado à conta."); redraw(); } }));
