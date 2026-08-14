@@ -205,9 +205,16 @@ export const reservationRepository = {
   },
 
   async updateStatus(id, status, userId, connection) {
+    if (status === "cancelled") {
+      await connection.execute(
+        "UPDATE reservations SET status=?, updated_by=?, cancelled_at=NOW() WHERE id=?",
+        [status, userId, id],
+      );
+      return;
+    }
     await connection.execute(
-      `UPDATE reservations SET status=?, updated_by=?, cancelled_at=CASE WHEN ?='cancelled' THEN NOW() ELSE cancelled_at END WHERE id=?`,
-      [status, userId, status, id],
+      "UPDATE reservations SET status=?, updated_by=? WHERE id=?",
+      [status, userId, id],
     );
   },
 
