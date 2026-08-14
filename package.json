@@ -9,6 +9,7 @@
     "node": ">=22 <25"
   },
   "scripts": {
+   "build": "node -e \"console.log('Build concluido: Express servira a pasta public')\"",
     "predev": "node scripts/migrate.js",
     "dev": "node --watch src/server.js",
     "prestart": "node scripts/migrate.js",
@@ -23,6 +24,8 @@
     "test:all": "npm run lint && npm test && npm run test:e2e",
     "check": "node scripts/check-project.js"
   },
+
+
   "dependencies": {
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
