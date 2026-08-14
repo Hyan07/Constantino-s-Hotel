@@ -17,6 +17,15 @@ function navigate(route, params = {}) {
   window.location.hash = `#/${route}${query ? `?${query}` : ""}`;
 }
 
+function currentDateLabel() {
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  }).format(new Date());
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function accountDrawer() {
   const { user } = getState();
   showDrawer({
@@ -89,7 +98,7 @@ function installSearch(root) {
     try {
       const items = await api.get("/api/search", { q });
       results.innerHTML = items.length ? items.map((item) => `<button class="search-result" data-type="${item.type}" data-id="${item.id}">
-        <i data-lucide="${item.type === "guest" ? "user" : item.type === "room" ? "door-open" : "calendar"}"></i>
+        <i data-lucide="${item.type === "guest" ? "user" : item.type === "room" ? "door-open" : item.type === "stay" ? "bed-double" : "calendar"}"></i>
         <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.subtitle || "")}</span></span>
       </button>`).join("") : `<p class="muted">Nenhum resultado encontrado.</p>`;
       results.hidden = false;
@@ -101,41 +110,60 @@ function installSearch(root) {
   }, 280);
   input.addEventListener("input", search);
   input.addEventListener("focus", () => wrapper.classList.add("is-open"));
+  input.addEventListener("blur", () => {
+    if (!input.value.trim()) wrapper.classList.remove("is-open");
+  });
   results.addEventListener("click", (event) => {
     const item = event.target.closest("[data-type]");
     if (!item) return;
-    const map = { guest: "hospedes", room: "quartos", reservation: "reservas" };
+    const map = { guest: "hospedes", room: "quartos", reservation: "reservas", stay: "hospedagens" };
     navigate(map[item.dataset.type], { open: item.dataset.id });
     results.hidden = true;
     input.value = "";
+    wrapper.classList.remove("is-open");
   });
   document.addEventListener("click", (event) => {
-    if (!wrapper.contains(event.target)) results.hidden = true;
+    if (!wrapper.contains(event.target)) {
+      results.hidden = true;
+      if (!input.value.trim()) wrapper.classList.remove("is-open");
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      wrapper.classList.add("is-open");
+      input.focus();
+      input.select();
+    }
+    if (event.key === "Escape" && document.activeElement === input) {
+      input.blur();
+      results.hidden = true;
+      wrapper.classList.remove("is-open");
+    }
   });
 }
 
 export function renderShell() {
   const { user, environment } = getState();
-  const collapsed = localStorage.getItem("constantinos.sidebar") === "collapsed";
   const nav = navigation.filter((item) => hasPermission(item.permission)).map((item) => `
-    <button class="nav-link" data-route="${item.route}" aria-label="${item.label}">
+    <button class="nav-link" data-route="${item.route}" aria-label="${item.label}" title="${item.label}">
       <i data-lucide="${item.icon}" aria-hidden="true"></i><span>${item.label}</span>
     </button>`).join("");
   const root = document.getElementById("app");
   root.className = "";
-  root.innerHTML = `<div class="app-layout${collapsed ? " is-collapsed" : ""}">
-    <aside class="sidebar">
-      <div class="sidebar__brand"><strong>Constantino's</strong><button class="icon-button sidebar__toggle" data-sidebar aria-label="Recolher menu"><i data-lucide="panel-left-close"></i></button></div>
+  root.innerHTML = `<div class="app-layout">
+    <aside class="sidebar" aria-label="Menu principal">
+      <div class="sidebar__brand"><strong>Constantino's Hotel</strong><button class="icon-button sidebar__toggle" data-mobile-sidebar-close aria-label="Fechar menu"><i data-lucide="panel-left-close"></i></button></div>
       <nav class="sidebar__nav" aria-label="Navegação principal">${nav}</nav>
-      <div class="sidebar__status"><strong>Sistema disponível</strong><span>${environment === "production" ? "Ambiente de produção" : "Ambiente local"}</span></div>
+      <div class="sidebar__status"><strong>Sistema disponível</strong><span>${environment === "production" ? "Ambiente de produção" : "Ambiente de desenvolvimento"}</span></div>
     </aside>
     <div class="mobile-backdrop" data-mobile-close></div>
     <header class="app-header">
-      <button class="icon-button mobile-menu-button" data-mobile-menu aria-label="Abrir menu"><i data-lucide="menu"></i></button>
-      <div class="header-greeting"><strong>Olá, ${escapeHtml(user.name.split(" ")[0])}</strong><span>Gestão do hotel</span></div>
+      <button class="icon-button mobile-menu-button" data-mobile-menu aria-label="Abrir menu" aria-expanded="false"><i data-lucide="menu"></i></button>
+      <div class="header-greeting"><strong>Olá, ${escapeHtml(user.name.split(" ")[0])}</strong><span>${escapeHtml(currentDateLabel())}</span></div>
       <div class="header-spacer"></div>
       <div class="global-search">
-        <input type="search" placeholder="Hóspede, quarto ou reserva" aria-label="Pesquisa global">
+        <input type="search" placeholder="Hóspede, quarto, reserva ou hospedagem" aria-label="Pesquisa global">
         <i class="global-search__icon" data-lucide="search"></i>
         <div class="search-results" hidden></div>
       </div>
@@ -157,17 +185,23 @@ export function renderShell() {
   refreshIcons(root);
 
   const layout = root.querySelector(".app-layout");
-  root.querySelector("[data-sidebar]").addEventListener("click", () => {
-    layout.classList.toggle("is-collapsed");
-    localStorage.setItem("constantinos.sidebar", layout.classList.contains("is-collapsed") ? "collapsed" : "open");
+  const mobileMenuButton = root.querySelector("[data-mobile-menu]");
+  const closeMobileMenu = () => {
+    layout.classList.remove("is-mobile-open");
+    mobileMenuButton.setAttribute("aria-expanded", "false");
+  };
+  mobileMenuButton.addEventListener("click", () => {
+    const open = !layout.classList.contains("is-mobile-open");
+    layout.classList.toggle("is-mobile-open", open);
+    mobileMenuButton.setAttribute("aria-expanded", String(open));
   });
-  root.querySelector("[data-mobile-menu]").addEventListener("click", () => layout.classList.add("is-mobile-open"));
-  root.querySelector("[data-mobile-close]").addEventListener("click", () => layout.classList.remove("is-mobile-open"));
+  root.querySelector("[data-mobile-sidebar-close]").addEventListener("click", closeMobileMenu);
+  root.querySelector("[data-mobile-close]").addEventListener("click", closeMobileMenu);
   root.querySelector(".sidebar__nav").addEventListener("click", (event) => {
     const link = event.target.closest("[data-route]");
     if (!link) return;
     navigate(link.dataset.route);
-    layout.classList.remove("is-mobile-open");
+    closeMobileMenu();
   });
   root.querySelector("[data-new-reservation]")?.addEventListener("click", () => window.dispatchEvent(new CustomEvent("app:new-reservation")));
   root.querySelectorAll("[data-quick]").forEach((button) => button.addEventListener("click", () => navigate("hospedagens", { tab: button.dataset.quick })));
