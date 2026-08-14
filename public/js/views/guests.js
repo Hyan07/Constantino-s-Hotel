@@ -5,13 +5,93 @@ import { currency, debounce, escapeHtml, initials, longDate, statusLabel } from 
 
 const state = { q: "", page: 1 };
 
+function digitsOnly(value, limit) {
+  return String(value || "").replace(/\D/g, "").slice(0, limit);
+}
+
+function formatCpfInput(value) {
+  const digits = digitsOnly(value, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatPhoneInput(value) {
+  const digits = digitsOnly(value, 11);
+  if (!digits) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function isValidCpfInput(value) {
+  const cpf = digitsOnly(value, 11);
+  if (!cpf) return true;
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digit = (length) => {
+    let sum = 0;
+    for (let index = 0; index < length; index += 1) {
+      sum += Number(cpf[index]) * (length + 1 - index);
+    }
+    const remainder = (sum * 10) % 11;
+    return remainder === 10 ? 0 : remainder;
+  };
+  return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+}
+
+function installGuestFieldValidation(form) {
+  const name = form.elements.name;
+  const cpf = form.elements.cpf;
+  const phone = form.elements.phone;
+
+  const validateName = () => {
+    const normalized = name.value.trim().replace(/\s+/g, " ");
+    name.setCustomValidity(normalized.length >= 3 ? "" : "Informe um nome com pelo menos 3 caracteres.");
+  };
+  const validateCpf = () => {
+    cpf.setCustomValidity(isValidCpfInput(cpf.value) ? "" : "Informe um CPF válido.");
+  };
+  const validatePhone = () => {
+    const digits = digitsOnly(phone.value, 11);
+    phone.setCustomValidity(!digits || [10, 11].includes(digits.length) ? "" : "Informe o telefone com DDD e 8 ou 9 dígitos.");
+  };
+
+  cpf.value = formatCpfInput(cpf.value);
+  phone.value = formatPhoneInput(phone.value);
+
+  name.addEventListener("input", validateName);
+  name.addEventListener("blur", () => {
+    name.value = name.value.trim().replace(/\s+/g, " ");
+    validateName();
+  });
+  cpf.addEventListener("input", () => {
+    cpf.value = formatCpfInput(cpf.value);
+    validateCpf();
+  });
+  cpf.addEventListener("blur", validateCpf);
+  phone.addEventListener("input", () => {
+    phone.value = formatPhoneInput(phone.value);
+    validatePhone();
+  });
+  phone.addEventListener("blur", validatePhone);
+
+  return () => {
+    validateName();
+    validateCpf();
+    validatePhone();
+    return form.reportValidity();
+  };
+}
+
 function guestFields(guest = {}) {
   const emailField = guest.id
     ? `<div class="field span-2"><label>E-mail <span class="muted">(opcional)</span></label><input name="email" type="email" value="${escapeHtml(guest.email || "")}" autocomplete="email"></div>`
     : "";
   return `<div class="field span-2"><label>Nome completo *</label><input name="name" value="${escapeHtml(guest.name || "")}" required minlength="3" maxlength="180" autocomplete="name"></div>
-    <div class="field"><label>CPF <span class="muted">(opcional)</span></label><input name="cpf" value="${escapeHtml(guest.cpf || "")}" inputmode="numeric" autocomplete="off" placeholder="Somente números"></div>
-    <div class="field"><label>Telefone <span class="muted">(opcional)</span></label><input name="phone" value="${escapeHtml(guest.phone || "")}" autocomplete="tel"></div>
+    <div class="field"><label>CPF <span class="muted">(opcional)</span></label><input name="cpf" value="${escapeHtml(formatCpfInput(guest.cpf || ""))}" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00"></div>
+    <div class="field"><label>Telefone <span class="muted">(opcional)</span></label><input name="phone" value="${escapeHtml(formatPhoneInput(guest.phone || ""))}" inputmode="tel" autocomplete="tel" maxlength="15" placeholder="(00) 00000-0000"></div>
     ${emailField}`;
 }
 
@@ -22,10 +102,13 @@ function guestModal(guest = null, afterSave = () => guestsView.render()) {
     content: `<form id="guest-form" class="form-grid">${guestFields(guest || {})}<p class="form-alert form-alert--danger span-2" data-error hidden></p></form>`,
     footer: `<button class="button button--ghost" data-close>Cancelar</button><button class="button button--primary" data-save>Salvar hóspede</button>`,
     onMount(element, close) {
+      const form = element.querySelector("#guest-form");
+      const validateFields = installGuestFieldValidation(form);
       element.querySelector("[data-save]").addEventListener("click", async () => {
-        const form = element.querySelector("#guest-form");
-        if (!form.reportValidity()) return;
+        if (!validateFields()) return;
         const body = Object.fromEntries(new FormData(form));
+        body.cpf = digitsOnly(body.cpf, 11);
+        body.phone = digitsOnly(body.phone, 11);
         try {
           const saved = guest ? await api.put(`/api/guests/${guest.id}`, body) : await api.post("/api/guests", body);
           close();
