@@ -36,11 +36,21 @@ function formattedCpf(value) {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
+function operationalInformation(hotel) {
+  return {
+    checkIn: hotel.checkInTime || "Não configurado",
+    checkOut: hotel.checkOutTime || "Não configurado",
+    cleaning: hotel.cleaningEstimateMinutes ? `${hotel.cleaningEstimateMinutes} minutos` : "Não configurado",
+  };
+}
+
 function printableStayDocument(item, settings) {
   const hotel = settings?.hotel || {};
   const hotelName = hotel.name || "Constantino's Hotel";
   const hotelContacts = [hotel.phone, hotel.email].filter(Boolean).join(" · ");
   const hotelAddress = hotel.address || "Passos, MG";
+  const operational = operationalInformation(hotel);
+  const privacyNotice = hotel.privacyNotice || "Os dados deste documento são utilizados para a execução e o registro da hospedagem e devem ser acessados somente por pessoas autorizadas.";
   const issuedAt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short" }).format(new Date());
   const safe = (value, fallback = "—") => escapeHtml(value === null || value === undefined || value === "" ? fallback : String(value));
   const charges = item.charges.length
@@ -90,11 +100,13 @@ function printableStayDocument(item, settings) {
     .money { padding: 10px; border: 1px solid #dce2e7; border-radius: 4px; }
     .money span { display: block; color: #6d7780; font-size: 10px; text-transform: uppercase; }
     .money strong { display: block; margin-top: 4px; font-size: 14px; }
+    .notice { margin-top: 12px; padding: 11px 13px; border-left: 3px solid #356a91; background: #f1f6f9; color: #3b4854; }
     .declaration { margin-top: 20px; padding: 12px 14px; border: 1px solid #c7d0d8; background: #f8fafb; }
     .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 54px; break-inside: avoid; }
     .signature { padding-top: 8px; border-top: 1px solid #17212b; text-align: center; }
     .signature strong { display: block; }
     .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #e9edf0; color: #89939c; font-size: 9px; text-align: center; }
+    .footer p { margin: 3px 0; }
     .muted { color: #89939c; text-align: center !important; }
     @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
   </style>
@@ -145,7 +157,16 @@ function printableStayDocument(item, settings) {
     </section>
 
     <section class="section">
-      <h3>3. Resumo financeiro</h3>
+      <h3>3. Informações operacionais do hotel</h3>
+      <div class="grid">
+        <div class="field"><span>Horário padrão de entrada</span><strong>${safe(operational.checkIn)}</strong></div>
+        <div class="field"><span>Horário padrão de saída</span><strong>${safe(operational.checkOut)}</strong></div>
+        <div class="field span-2"><span>Tempo estimado de limpeza e organização da unidade</span><strong>${safe(operational.cleaning)}</strong></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>4. Resumo financeiro</h3>
       <div class="financial">
         <div class="money"><span>Hospedagem</span><strong>${currency(item.lodging_amount)}</strong></div>
         <div class="money"><span>Consumos</span><strong>${currency(item.charges_amount)}</strong></div>
@@ -159,7 +180,7 @@ function printableStayDocument(item, settings) {
     </section>
 
     <section class="section">
-      <h3>4. Consumos e lançamentos</h3>
+      <h3>5. Consumos e lançamentos</h3>
       <table>
         <thead><tr><th>Descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead>
         <tbody>${charges}</tbody>
@@ -167,15 +188,20 @@ function printableStayDocument(item, settings) {
     </section>
 
     <section class="section">
-      <h3>5. Pagamentos registrados</h3>
+      <h3>6. Pagamentos registrados</h3>
       <table>
         <thead><tr><th>Data</th><th>Forma de pagamento</th><th>Valor</th></tr></thead>
         <tbody>${payments}</tbody>
       </table>
     </section>
 
+    <section class="section">
+      <h3>7. Privacidade e ciência</h3>
+      <div class="notice">${safe(privacyNotice)}</div>
+    </section>
+
     <div class="declaration">
-      Declaro que conferi os dados acima e estou ciente do período, da acomodação e dos valores registrados neste termo de hospedagem.
+      Declaro que conferi os dados acima e estou ciente do período, da acomodação, dos horários informados, das condições operacionais e dos valores registrados neste termo de hospedagem.
     </div>
 
     <div class="signatures">
@@ -183,7 +209,10 @@ function printableStayDocument(item, settings) {
       <div class="signature"><strong>${safe(hotelName)}</strong><span>Responsável pelo hotel</span></div>
     </div>
 
-    <footer class="footer">Documento gerado pelo sistema em ${safe(issuedAt)}.</footer>
+    <footer class="footer">
+      <p>Documento gerado pelo sistema em ${safe(issuedAt)}.</p>
+      <p>Este termo é um documento interno da hospedagem e não substitui o registro na FNRH Digital quando aplicável.</p>
+    </footer>
   </main>
 </body>
 </html>`);
@@ -197,6 +226,8 @@ async function openStay(id) {
     api.get(`/api/stays/${id}`),
     api.get("/api/settings").catch(() => ({ hotel: {} })),
   ]);
+  const hotel = settings?.hotel || {};
+  const operational = operationalInformation(hotel);
   const redraw = () => { drawer.close(); openStay(id); };
   const stayActions = hasPermission("stays.write") ? `<button class="button button--ghost" data-extend>Estender</button><button class="button button--secondary" data-charge>Adicionar consumo</button>${hasPermission("payments.write") ? `<button class="button button--secondary" data-payment>Registrar pagamento</button>` : ""}<button class="button button--primary" data-checkout>Fazer check-out</button>` : "";
   const drawer = showDrawer({
@@ -204,6 +235,7 @@ async function openStay(id) {
     eyebrow: `Hospedagem · ${item.reservation_code}`,
     content: `<div class="identity-cell"><span class="avatar">${initials(item.guest_name)}</span><div><h3>${escapeHtml(item.guest_name)}</h3><p class="muted">${escapeHtml(item.guest_cpf || "CPF não informado")} · ${escapeHtml(item.guest_phone || "telefone não informado")}</p></div></div>
       <h3 class="section-title">Estadia</h3><div class="detail-grid">${detail("Situação", statusLabel(item.status))}${detail("Categoria", item.category_name)}${detail("Check-in", dateTime(item.check_in_at))}${detail("Saída prevista", longDate(item.expected_checkout_date))}${detail("Ocupação", `${item.adults} adulto(s) · ${item.children} criança(s)`)}${detail("Reserva", item.reservation_code)}</div>
+      <h3 class="section-title">Informações do hotel</h3><div class="detail-grid">${detail("Entrada padrão", operational.checkIn)}${detail("Saída padrão", operational.checkOut)}${detail("Limpeza estimada", operational.cleaning)}</div>
       <h3 class="section-title">Conta</h3><div class="detail-grid">${detail("Hospedagem", currency(item.lodging_amount))}${detail("Consumos", currency(item.charges_amount))}${detail("Pago", currency(item.paid_amount))}${detail("Saldo", currency(item.balance))}</div>
       <h3 class="section-title">Lançamentos</h3>${item.charges.length ? `<div class="timeline-list">${item.charges.map((charge) => `<div class="timeline-item"><strong>${escapeHtml(charge.description)} · ${currency(charge.total_amount)}</strong><span>${dateTime(charge.charged_at)} · ${charge.quantity} × ${currency(charge.unit_price)}</span></div>`).join("")}</div>` : `<p class="muted">Nenhum consumo lançado.</p>`}
       <h3 class="section-title">Pagamentos</h3>${item.payments.length ? `<div class="timeline-list">${item.payments.map((payment) => `<div class="timeline-item"><strong>${currency(payment.amount)} · ${escapeHtml(payment.payment_method)}</strong><span>${dateTime(payment.paid_at)} · ${escapeHtml(payment.user_name)}</span></div>`).join("")}</div>` : `<p class="muted">Nenhum pagamento registrado.</p>`}`,
