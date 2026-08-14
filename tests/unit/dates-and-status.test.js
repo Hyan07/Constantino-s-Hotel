@@ -9,8 +9,12 @@ test("calcula diárias e avança datas sem depender do horário local", () => {
   assert.throws(() => assertDateRange("2026-08-16", "2026-08-13"), /posterior/);
 });
 
-test("impede transições inválidas de reserva", () => {
+test("permite corrigir a situação antes do check-in e protege estados finais", () => {
+  assert.equal(canTransitionReservation("pending", "awaiting_checkin"), true);
+  assert.equal(canTransitionReservation("confirmed", "pending"), true);
+  assert.equal(canTransitionReservation("awaiting_checkin", "confirmed"), true);
   assert.equal(canTransitionReservation("confirmed", "checked_in"), true);
+  assert.equal(canTransitionReservation("checked_in", "confirmed"), false);
   assert.equal(canTransitionReservation("completed", "confirmed"), false);
   assert.equal(canTransitionReservation("cancelled", "checked_in"), false);
 });
