@@ -59,7 +59,7 @@ function overlayCloser(backdrop, { onClose } = {}) {
     window.removeEventListener("keydown", keydown);
     closeOverlay(backdrop);
     onClose?.(reason);
-    queueMicrotask(() => {
+    Promise.resolve().then(() => {
       if (opener?.isConnected) opener.focus();
     });
   };
