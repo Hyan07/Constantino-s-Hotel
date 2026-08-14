@@ -1,3 +1,4 @@
+import { api } from "../api.js";
 import { escapeHtml } from "../utils/format.js";
 import { toast } from "./ui.js";
 
@@ -251,6 +252,50 @@ function protectWizardEscape(event) {
   }
 }
 
+function checkedInReservationTarget(target) {
+  const item = target?.closest?.("[data-open]");
+  if (!item) return null;
+  const checkedIn = item.dataset.status === "checked_in" || Boolean(item.querySelector?.(".status--checked_in"));
+  return checkedIn ? item : null;
+}
+
+async function openLinkedStay(reservationId) {
+  const reservation = await api.get(`/api/reservations/${reservationId}`);
+  const stays = await api.get("/api/stays", { tab: "active", q: reservation.code });
+  const stay = stays.find((item) => Number(item.reservation_id) === Number(reservation.id))
+    || stays.find((item) => item.reservation_code === reservation.code);
+
+  if (!stay) {
+    toast("A reserva está marcada como hospedada, mas a hospedagem ativa correspondente não foi localizada.", {
+      title: "Hospedagem não encontrada",
+      type: "danger",
+    });
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent("app:navigate", {
+    detail: { route: "hospedagens", params: { open: stay.id } },
+  }));
+}
+
+function interceptCheckedInReservation(event) {
+  const item = checkedInReservationTarget(event.target);
+  if (!item) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+
+  if (item.dataset.openingStay === "true") return;
+  item.dataset.openingStay = "true";
+  openLinkedStay(item.dataset.open)
+    .catch((error) => toast(error.message, { title: "Hospedagem não disponível", type: "danger" }))
+    .finally(() => { delete item.dataset.openingStay; });
+}
+
+function interceptCheckedInReservationKey(event) {
+  if (!["Enter", " "].includes(event.key)) return;
+  interceptCheckedInReservation(event);
+}
+
 export function installReservationWizardEnhancer() {
   const root = document.getElementById("overlay-root");
   if (!root || root.dataset.reservationWizardEnhancer === "true") return;
@@ -263,6 +308,8 @@ export function installReservationWizardEnhancer() {
     if (backdrop) Promise.resolve().then(() => enhanceWizard(backdrop));
   });
   window.addEventListener("keydown", protectWizardEscape, true);
+  document.addEventListener("click", interceptCheckedInReservation, true);
+  document.addEventListener("keydown", interceptCheckedInReservationKey, true);
 
   const enhance = () => {
     root.querySelectorAll(".modal-backdrop").forEach((backdrop) => enhanceWizard(backdrop));
