@@ -7,6 +7,8 @@ const loginError = document.getElementById("login-error");
 const cpfInput = document.getElementById("cpf");
 const passwordInput = document.getElementById("password");
 const submit = document.getElementById("login-submit");
+const forgotButton = document.getElementById("forgot-button");
+let passwordRecoveryEnabled = true;
 
 function icons() { window.lucide?.createIcons({ attrs: { "stroke-width": 1.8 } }); }
 
@@ -57,7 +59,13 @@ loginForm.addEventListener("submit", async (event) => {
   }
 });
 
-document.getElementById("forgot-button").addEventListener("click", () => show(forgotForm));
+forgotButton.addEventListener("click", () => {
+  if (!passwordRecoveryEnabled) {
+    feedback(loginError, "A recuperação por e-mail ainda não está configurada. Solicite a um administrador a redefinição da senha.", true);
+    return;
+  }
+  show(forgotForm);
+});
 document.querySelectorAll("[data-back-login]").forEach((button) => button.addEventListener("click", () => show(loginForm)));
 
 forgotForm.addEventListener("submit", async (event) => {
@@ -69,7 +77,9 @@ forgotForm.addEventListener("submit", async (event) => {
     const result = await api.post("/api/auth/forgot-password", { identity: document.getElementById("identity").value });
     feedback(feedbackElement, result.message);
   } catch (error) {
-    feedback(feedbackElement, error.message, true);
+    feedback(feedbackElement, error.code === "SMTP_NOT_CONFIGURED"
+      ? "A recuperação por e-mail está temporariamente indisponível. Solicite a um administrador a redefinição da senha."
+      : error.message, true);
   } finally { button.disabled = false; }
 });
 
@@ -96,6 +106,10 @@ async function initialize() {
   try {
     const data = await api.get("/api/auth/environment");
     document.getElementById("environment-badge").hidden = data.environment === "production";
+    passwordRecoveryEnabled = data.passwordRecoveryEnabled !== false;
+    if (!passwordRecoveryEnabled) {
+      forgotButton.title = "Recuperação por e-mail ainda não configurada";
+    }
   } catch { /* O formulário continua disponível mesmo se o indicador falhar. */ }
 }
 
