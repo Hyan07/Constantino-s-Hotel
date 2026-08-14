@@ -9,6 +9,7 @@ import { isValidCpf, maskCpf, normalizeCpf } from "../utils/cpf.js";
 import { isValidCnpjFormat, normalizeCnpj } from "../utils/cnpj.js";
 import { booleanValue, nonNegativeMoney, optionalString, positiveId, requiredString } from "../validators/common.js";
 import { paginationMeta, parsePagination } from "../utils/pagination.js";
+import { normalizeReservationSources, normalizeStayPrint } from "./configuration-options.js";
 
 function slug(value) {
   return String(value || "")
@@ -170,6 +171,8 @@ export const adminService = {
       if (!Array.isArray(input.payment_methods) || input.payment_methods.length < 1 || input.payment_methods.length > 20) throw new AppError("VALIDATION_ERROR", "Informe de 1 a 20 formas de pagamento.");
       normalized.payment_methods = [...new Set(input.payment_methods.map((method) => requiredString(method, "Forma de pagamento", { max: 80 })))];
     }
+    if (input.reservation_sources !== undefined) normalized.reservation_sources = normalizeReservationSources(input.reservation_sources);
+    if (input.stay_print !== undefined) normalized.stay_print = normalizeStayPrint(input.stay_print);
     if (!Object.keys(normalized).length) throw new AppError("VALIDATION_ERROR", "Nenhuma configuração válida foi informada.");
     await withTransaction(async (connection) => {
       for (const [key, value] of Object.entries(normalized)) {

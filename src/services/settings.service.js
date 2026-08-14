@@ -1,4 +1,5 @@
 import { settingsRepository } from "../repositories/settings.repository.js";
+import { defaultReservationSources, defaultStayPrint } from "./configuration-options.js";
 
 function objectValue(value, fallback) {
   if (value === null || value === undefined) return fallback;
@@ -12,6 +13,8 @@ export const settingsService = {
     return {
       hotel: objectValue(values.hotel, {}),
       paymentMethods: objectValue(values.payment_methods, ["Pix", "Dinheiro", "Cartão de crédito", "Cartão de débito"]),
+      reservationSources: objectValue(values.reservation_sources, defaultReservationSources),
+      stayPrint: { ...defaultStayPrint, ...objectValue(values.stay_print, {}) },
     };
   },
 };
