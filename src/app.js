@@ -26,6 +26,12 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(currentDir, "../public");
 const lucideFile = path.resolve(currentDir, "../node_modules/lucide/dist/umd/lucide.min.js");
 
+function setStaticCacheHeaders(res, filePath) {
+  if (/\.(?:html|js)$/i.test(filePath)) {
+    res.setHeader("Cache-Control", "no-cache");
+  }
+}
+
 export function createApp() {
   const app = express();
   if (config.trustProxy) app.set("trust proxy", config.trustProxy);
@@ -84,7 +90,11 @@ export function createApp() {
   app.use("/api/search", searchRoutes);
   app.use("/api/settings", settingsRoutes);
 
-  app.use(express.static(publicDir, { index: false, maxAge: config.env === "production" ? "1h" : 0 }));
+  app.use(express.static(publicDir, {
+    index: false,
+    maxAge: config.env === "production" ? "1h" : 0,
+    setHeaders: setStaticCacheHeaders,
+  }));
   app.get("/login", (_req, res) => res.redirect(302, "/login.html"));
   app.get("/", (req, res) => {
     if (!req.cookies?.[config.session.cookieName]) return res.redirect(302, "/login.html");
