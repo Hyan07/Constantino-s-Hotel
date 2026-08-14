@@ -8,6 +8,11 @@ async function boot() {
   try {
     const session = await api.get("/api/auth/session");
     setState(session);
+
+    // A sidebar deve iniciar aberta. Remove estados antigos que podiam deixá-la
+    // permanentemente recolhida após recarregar o sistema.
+    localStorage.removeItem("constantinos.sidebar");
+
     renderShell();
     startRouter();
   } catch (error) {
