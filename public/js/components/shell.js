@@ -4,7 +4,7 @@ import { debounce, escapeHtml, initials } from "../utils/format.js";
 import { refreshIcons, showDrawer, showModal, toast } from "./ui.js";
 
 const navigation = [
-  { route: "dashboard", label: "Início", icon: "layout-dashboard", permission: "reservations.read" },
+  { route: "dashboard", label: "Visão Geral", icon: "layout-dashboard", permission: "reservations.read" },
   { route: "reservas", label: "Reservas", icon: "calendar-days", permission: "reservations.read" },
   { route: "hospedagens", label: "Hospedagens", icon: "bed-double", permission: "stays.read" },
   { route: "quartos", label: "Quartos", icon: "door-open", permission: "rooms.read" },
@@ -202,6 +202,7 @@ export function renderShell() {
     if (!link) return;
     navigate(link.dataset.route);
     closeMobileMenu();
+    if (event.detail > 0) link.blur();
   });
   root.querySelector("[data-new-reservation]")?.addEventListener("click", () => window.dispatchEvent(new CustomEvent("app:new-reservation")));
   root.querySelectorAll("[data-quick]").forEach((button) => button.addEventListener("click", () => navigate("hospedagens", { tab: button.dataset.quick })));
