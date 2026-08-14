@@ -1,9 +1,9 @@
 -- Normaliza o banco existente para a mesma collation usada pelo schema do projeto.
 -- Evita erros de comparação entre utf8mb4_0900_ai_ci (MySQL 8) e utf8mb4_unicode_ci
 -- em ambientes que já possuíam tabelas/colunas criadas com defaults diferentes.
+--
+-- Não altera chaves, relacionamentos nem dados; somente o charset/collation das colunas textuais.
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-ALTER DATABASE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ALTER TABLE roles CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ALTER TABLE permissions CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
