@@ -25,7 +25,16 @@ export const stayService = {
     if (!stay) throw new AppError("STAY_NOT_FOUND", "Hospedagem não encontrada.", 404);
     const [charges, payments] = await Promise.all([stayRepository.charges(stayId), stayRepository.payments(stay)]);
     const total = Number(stay.lodging_amount) + Number(stay.charges_amount);
-    return { ...stay, guest_cpf: maskCpf(stay.guest_cpf), total_amount: total, balance: total - Number(stay.paid_amount), charges, payments };
+    const documentCpf = stay.guest_cpf;
+    return {
+      ...stay,
+      guest_cpf: maskCpf(stay.guest_cpf),
+      guest_cpf_document: documentCpf,
+      total_amount: total,
+      balance: total - Number(stay.paid_amount),
+      charges,
+      payments,
+    };
   },
 
   async checkIn(reservationIdValue, actor) {
