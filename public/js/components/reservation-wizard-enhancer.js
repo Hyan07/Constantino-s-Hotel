@@ -107,15 +107,29 @@ function enhanceGuestSelection(wizard) {
   const backdrop = reservationBackdropFrom(wizard);
   const state = backdrop ? stateFor(backdrop) : {};
   const selected = results.querySelector(".guest-result.is-selected");
-  if (selected) state.selectedGuest = selectedGuestText(selected);
+  if (selected && !state.choosingGuest) state.selectedGuest = selectedGuestText(selected);
+
+  const searchField = search.closest(".field");
   if (!state.selectedGuest) {
     banner.hidden = true;
+    results.hidden = false;
+    if (searchField) searchField.hidden = false;
     return;
   }
 
   const { name, detail } = state.selectedGuest;
+  const signature = `${name}|${detail}`;
+  if (banner.dataset.selectedGuestSignature !== signature) {
+    banner.dataset.selectedGuestSignature = signature;
+    banner.innerHTML = `<strong>✓ Hóspede selecionado: ${escapeHtml(name)}</strong><span style="display:block;margin-top:3px">${escapeHtml(detail)} · Você pode continuar para a próxima etapa.</span><button type="button" class="link-button" data-change-selected-guest style="margin-top:7px">Trocar hóspede</button>`;
+  }
+
+  const choosingGuest = state.choosingGuest === true;
   banner.hidden = false;
-  banner.innerHTML = `<strong>✓ Hóspede selecionado: ${escapeHtml(name)}</strong><span style="display:block;margin-top:3px">${escapeHtml(detail)} · Você pode continuar para a próxima etapa.</span>`;
+  results.hidden = !choosingGuest;
+  if (searchField) searchField.hidden = !choosingGuest;
+  const changeButton = banner.querySelector("[data-change-selected-guest]");
+  if (changeButton) changeButton.hidden = choosingGuest;
 }
 
 function rememberPeriod(backdrop, wizard) {
@@ -170,7 +184,8 @@ function enhanceValues(backdrop, wizard) {
   const preview = [...wizard.querySelectorAll("input[disabled]")].find((input) => (
     input.closest(".field")?.querySelector("label")?.textContent?.includes("Prévia do total")
   ));
-  if (!preview) return;
+  if (!preview || preview.dataset.financialPreviewEnhanced === "true") return;
+  preview.dataset.financialPreviewEnhanced = "true";
 
   let breakdown = wizard.querySelector("[data-financial-breakdown]");
   if (!breakdown) {
@@ -189,11 +204,11 @@ function enhanceValues(backdrop, wizard) {
     const subtotal = rate * nights;
     const total = Math.max(0, subtotal - discountValue + surchargeValue);
     preview.value = money(total);
-    breakdown.innerHTML = `<strong>Cálculo automático</strong><span style="display:block;margin-top:4px">${nights} diária(s) × ${money(rate)} = ${money(subtotal)} · Desconto − ${money(discountValue)} · Acréscimo + ${money(surchargeValue)}</span><strong style="display:block;margin-top:6px;font-size:1rem">Total: ${money(total)}</strong>`;
+    const markup = `<strong>Cálculo automático</strong><span style="display:block;margin-top:4px">${nights} diária(s) × ${money(rate)} = ${money(subtotal)} · Desconto − ${money(discountValue)} · Acréscimo + ${money(surchargeValue)}</span><strong style="display:block;margin-top:6px;font-size:1rem">Total: ${money(total)}</strong>`;
+    if (breakdown.innerHTML !== markup) breakdown.innerHTML = markup;
   };
 
   for (const input of [dailyRate, discount, surcharge]) {
-    if (input.dataset.financialPreviewBound === "true") continue;
     input.dataset.financialPreviewBound = "true";
     input.addEventListener("input", update);
     input.addEventListener("change", update);
@@ -216,7 +231,7 @@ function enhanceReservationDrawers(root) {
     const eyebrow = drawer.querySelector(".eyebrow")?.textContent?.trim();
     if (eyebrow !== "Detalhes da reserva") return;
     const edit = drawer.querySelector("[data-edit]");
-    if (edit) edit.textContent = "Editar reserva / situação";
+    if (edit && edit.textContent !== "Editar reserva / situação") edit.textContent = "Editar reserva / situação";
   });
 }
 
@@ -303,9 +318,24 @@ export function installReservationWizardEnhancer() {
 
   root.addEventListener("click", protectWizardBackdrop, true);
   root.addEventListener("click", (event) => {
-    if (!event.target.closest?.("[data-guest]")) return;
     const backdrop = reservationBackdropFrom(event.target);
-    if (backdrop) Promise.resolve().then(() => enhanceWizard(backdrop));
+    if (!backdrop) return;
+
+    const changeButton = event.target.closest?.("[data-change-selected-guest]");
+    if (changeButton) {
+      const state = stateFor(backdrop);
+      state.choosingGuest = true;
+      enhanceWizard(backdrop);
+      backdrop.querySelector("#guest-search")?.focus();
+      return;
+    }
+
+    const guestButton = event.target.closest?.("[data-guest]");
+    if (!guestButton) return;
+    const state = stateFor(backdrop);
+    state.selectedGuest = selectedGuestText(guestButton);
+    state.choosingGuest = false;
+    Promise.resolve().then(() => enhanceWizard(backdrop));
   });
   window.addEventListener("keydown", protectWizardEscape, true);
   document.addEventListener("click", interceptCheckedInReservation, true);
