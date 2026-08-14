@@ -18,12 +18,24 @@ export const searchRepository = {
        WHERE r.code LIKE ? OR g.name LIKE ? ORDER BY r.id DESC LIMIT 6`,
       [term, term],
     );
+    const [stays] = await getPool().execute(
+      `SELECT s.id, CONCAT(g.name,' · Quarto ',rm.number) AS title,
+        CONCAT('Hospedagem ', s.status, ' · entrada ', DATE(s.check_in_at), ' · saída prevista ', s.expected_checkout_date) AS subtitle,
+        'stay' AS type
+       FROM stays s
+       JOIN guests g ON g.id=s.guest_id
+       JOIN rooms rm ON rm.id=s.room_id
+       LEFT JOIN reservations r ON r.id=s.reservation_id
+       WHERE g.name LIKE ? OR rm.number LIKE ? OR COALESCE(r.code,'') LIKE ?
+       ORDER BY s.id DESC LIMIT 6`,
+      [term, term, term],
+    );
     const [rooms] = await getPool().execute(
       `SELECT rm.id, CONCAT('Quarto ',rm.number) AS title, CONCAT(rc.name,' · ',rm.status) AS subtitle, 'room' AS type
        FROM rooms rm JOIN room_categories rc ON rc.id=rm.room_category_id
        WHERE rm.active=TRUE AND (rm.number LIKE ? OR rc.name LIKE ?) ORDER BY rm.number LIMIT 6`,
       [term, term],
     );
-    return [...guests, ...reservations, ...rooms].slice(0, 12);
+    return [...guests, ...reservations, ...stays, ...rooms].slice(0, 16);
   },
 };
