@@ -139,6 +139,12 @@ export const adminService = {
       try { new Intl.DateTimeFormat("pt-BR", { timeZone: timezone }).format(); } catch { throw new AppError("VALIDATION_ERROR", "O fuso horário informado não é válido."); }
       const currency = String(input.hotel.currency || "BRL").toUpperCase();
       if (!/^[A-Z]{3}$/.test(currency)) throw new AppError("VALIDATION_ERROR", "A moeda deve usar um código de três letras, como BRL.");
+      const cleaningEstimateMinutes = input.hotel.cleaningEstimateMinutes === undefined || input.hotel.cleaningEstimateMinutes === ""
+        ? null
+        : Number(input.hotel.cleaningEstimateMinutes);
+      if (cleaningEstimateMinutes !== null && (!Number.isInteger(cleaningEstimateMinutes) || cleaningEstimateMinutes < 1 || cleaningEstimateMinutes > 180)) {
+        throw new AppError("VALIDATION_ERROR", "O tempo estimado de limpeza deve ser de 1 a 180 minutos.");
+      }
       normalized.hotel = {
         name: requiredString(input.hotel.name, "Nome do hotel", { min: 2, max: 160 }),
         phone: optionalString(input.hotel.phone, "Telefone", { max: 30 }) || "",
@@ -146,6 +152,8 @@ export const adminService = {
         address: optionalString(input.hotel.address, "Endereço", { max: 500 }) || "",
         checkInTime,
         checkOutTime,
+        cleaningEstimateMinutes,
+        privacyNotice: optionalString(input.hotel.privacyNotice, "Aviso de privacidade", { max: 2000 }) || "",
         currency,
         timezone,
       };
