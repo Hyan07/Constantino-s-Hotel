@@ -3,7 +3,7 @@ import { getPool } from "../database/pool.js";
 const staySelect = `
   SELECT s.*, r.code AS reservation_code, r.total_amount AS lodging_amount, r.status AS reservation_status,
     r.check_in_date, r.check_out_date, r.adults, r.children, r.nights, r.daily_rate, r.discount, r.surcharge,
-    g.name AS guest_name, g.cpf AS guest_cpf, g.cpf AS guest_cpf_document, g.phone AS guest_phone, g.email AS guest_email,
+    g.name AS guest_name, g.cpf AS guest_cpf, g.phone AS guest_phone, g.email AS guest_email,
     g.postal_code AS guest_postal_code, g.street AS guest_street, g.street_number AS guest_street_number,
     g.complement AS guest_complement, g.neighborhood AS guest_neighborhood, g.city AS guest_city, g.state AS guest_state,
     rm.number AS room_number, rm.status AS room_status, rc.name AS category_name,
