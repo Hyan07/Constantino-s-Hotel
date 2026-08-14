@@ -27,9 +27,11 @@ export const stayRepository = {
     if (tab === "departures") { clauses.push("s.expected_checkout_date=?"); params.push(today); }
     if (tab === "extended") clauses.push("s.status='extended'");
     if (q) {
-      clauses.push("(g.name LIKE ? OR g.cpf LIKE ? OR rm.number LIKE ? OR r.code LIKE ?)");
       const term = `%${q}%`;
-      params.push(term, term, term, term);
+      const digits = String(q).replace(/\D/g, "");
+      const cpfTerm = `%${digits || q}%`;
+      clauses.push("(g.name LIKE ? OR g.cpf LIKE ? OR g.phone LIKE ? OR g.email LIKE ? OR rm.number LIKE ? OR r.code LIKE ?)");
+      params.push(term, cpfTerm, term, term, term, term);
     }
     const order = tab === "completed" ? "s.check_out_at DESC, s.id DESC" : "s.expected_checkout_date, rm.number";
     const [rows] = await getPool().execute(
