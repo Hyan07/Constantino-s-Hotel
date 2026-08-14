@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { hasPermission } from "../state.js";
+import { getState, hasPermission } from "../state.js";
 import { confirmDialog, emptyState, setMain, showDrawer, showModal, toast } from "../components/ui.js";
 import { currency, dateTime, debounce, escapeHtml, initials, longDate, shortDate, statusLabel } from "../utils/format.js";
 
@@ -46,6 +46,8 @@ function operationalInformation(hotel) {
 
 function printableStayDocument(item, settings) {
   const hotel = settings?.hotel || {};
+  const currentOperator = getState().user?.name || "Operador não identificado";
+  const checkInOperator = item.checkin_operator_name || currentOperator;
   const hotelName = hotel.name || "Constantino's Hotel";
   const hotelContacts = [hotel.phone, hotel.email].filter(Boolean).join(" · ");
   const hotelAddress = hotel.address || "Passos, MG";
@@ -62,7 +64,7 @@ function printableStayDocument(item, settings) {
 
   const printWindow = window.open("", "_blank", "width=980,height=760");
   if (!printWindow) {
-    toast("Permita pop-ups para imprimir o contrato de hospedagem.", { title: "Impressão bloqueada", type: "danger" });
+    toast("Permita pop-ups para imprimir o termo de hospedagem.", { title: "Impressão bloqueada", type: "danger" });
     return;
   }
 
@@ -74,41 +76,45 @@ function printableStayDocument(item, settings) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Termo de hospedagem · ${safe(item.reservation_code)}</title>
   <style>
-    @page { size: A4; margin: 14mm; }
+    @page { size: A4 portrait; margin: 7mm; }
     * { box-sizing: border-box; }
-    body { margin: 0; color: #17212b; font: 12px/1.45 Arial, Helvetica, sans-serif; background: white; }
-    .document { max-width: 820px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 2px solid #102b46; }
-    .brand h1 { margin: 0 0 4px; color: #102b46; font-size: 22px; }
-    .brand p, .meta p { margin: 2px 0; color: #5d6872; }
+    html, body { margin: 0; padding: 0; background: white; }
+    body { color: #17212b; font: 9px/1.18 Arial, Helvetica, sans-serif; }
+    .document { width: 100%; max-width: 196mm; margin: 0 auto; transform-origin: top left; }
+    .header { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 6px; border-bottom: 2px solid #102b46; }
+    .brand h1 { margin: 0 0 2px; color: #102b46; font-size: 16px; }
+    .brand p, .meta p { margin: 1px 0; color: #5d6872; }
     .meta { text-align: right; }
-    .title { margin: 24px 0 18px; text-align: center; }
-    .title h2 { margin: 0; font-size: 18px; letter-spacing: .08em; text-transform: uppercase; }
-    .title p { margin: 5px 0 0; color: #5d6872; }
-    .section { margin-top: 18px; break-inside: avoid; }
-    .section h3 { margin: 0 0 8px; padding-bottom: 5px; color: #102b46; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid #dce2e7; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
-    .field { min-height: 36px; padding: 6px 0; }
-    .field span { display: block; color: #6d7780; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
-    .field strong { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; }
+    .title { margin: 7px 0 5px; text-align: center; }
+    .title h2 { margin: 0; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; }
+    .title p { margin: 2px 0 0; color: #5d6872; font-size: 8px; }
+    .section { margin-top: 5px; break-inside: avoid; }
+    .section h3 { margin: 0 0 3px; padding-bottom: 2px; color: #102b46; font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #dce2e7; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 12px; }
+    .field { min-height: 0; padding: 1.5px 0; }
+    .field span { display: block; color: #6d7780; font-size: 7px; text-transform: uppercase; letter-spacing: .03em; }
+    .field strong { display: block; margin-top: 1px; font-size: 8.7px; font-weight: 600; }
     .span-2 { grid-column: 1 / -1; }
-    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-    th, td { padding: 7px 8px; border: 1px solid #dce2e7; text-align: left; vertical-align: top; }
-    th { background: #f1f6f9; color: #102b46; font-size: 10px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+    th, td { padding: 2.5px 4px; border: 1px solid #dce2e7; text-align: left; vertical-align: top; font-size: 7.8px; }
+    th { background: #f1f6f9; color: #102b46; font-size: 7px; text-transform: uppercase; }
     td:last-child, th:last-child { text-align: right; }
-    .financial { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .money { padding: 10px; border: 1px solid #dce2e7; border-radius: 4px; }
-    .money span { display: block; color: #6d7780; font-size: 10px; text-transform: uppercase; }
-    .money strong { display: block; margin-top: 4px; font-size: 14px; }
-    .notice { margin-top: 12px; padding: 11px 13px; border-left: 3px solid #356a91; background: #f1f6f9; color: #3b4854; }
-    .declaration { margin-top: 20px; padding: 12px 14px; border: 1px solid #c7d0d8; background: #f8fafb; }
-    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin-top: 54px; break-inside: avoid; }
-    .signature { padding-top: 8px; border-top: 1px solid #17212b; text-align: center; }
-    .signature strong { display: block; }
-    .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #e9edf0; color: #89939c; font-size: 9px; text-align: center; }
-    .footer p { margin: 3px 0; }
+    .financial { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .money { padding: 4px 5px; border: 1px solid #dce2e7; border-radius: 3px; }
+    .money span { display: block; color: #6d7780; font-size: 7px; text-transform: uppercase; }
+    .money strong { display: block; margin-top: 1px; font-size: 9px; }
+    .notice { margin-top: 3px; padding: 4px 6px; border-left: 2px solid #356a91; background: #f1f6f9; color: #3b4854; font-size: 7.8px; }
+    .declaration { margin-top: 5px; padding: 5px 7px; border: 1px solid #c7d0d8; background: #f8fafb; font-size: 7.8px; }
+    .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 38px; margin-top: 18px; break-inside: avoid; }
+    .signature { padding-top: 4px; border-top: 1px solid #17212b; text-align: center; font-size: 8px; }
+    .signature strong { display: block; font-size: 8.5px; }
+    .footer { margin-top: 6px; padding-top: 4px; border-top: 1px solid #e9edf0; color: #89939c; font-size: 6.8px; text-align: center; }
+    .footer p { margin: 1px 0; }
     .muted { color: #89939c; text-align: center !important; }
-    @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+    @media print {
+      body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .document { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
@@ -123,6 +129,7 @@ function printableStayDocument(item, settings) {
         <p><strong>Reserva:</strong> ${safe(item.reservation_code)}</p>
         <p><strong>Hospedagem:</strong> #${safe(item.id)}</p>
         <p><strong>Situação:</strong> ${safe(statusLabel(item.status))}</p>
+        <p><strong>Operador do check-in:</strong> ${safe(checkInOperator)}</p>
       </div>
     </header>
 
@@ -157,11 +164,11 @@ function printableStayDocument(item, settings) {
     </section>
 
     <section class="section">
-      <h3>3. Informações operacionais do hotel</h3>
+      <h3>3. Informações operacionais</h3>
       <div class="grid">
-        <div class="field"><span>Horário padrão de entrada</span><strong>${safe(operational.checkIn)}</strong></div>
-        <div class="field"><span>Horário padrão de saída</span><strong>${safe(operational.checkOut)}</strong></div>
-        <div class="field span-2"><span>Tempo estimado de limpeza e organização da unidade</span><strong>${safe(operational.cleaning)}</strong></div>
+        <div class="field"><span>Entrada padrão</span><strong>${safe(operational.checkIn)}</strong></div>
+        <div class="field"><span>Saída padrão</span><strong>${safe(operational.checkOut)}</strong></div>
+        <div class="field span-2"><span>Limpeza estimada</span><strong>${safe(operational.cleaning)}</strong></div>
       </div>
     </section>
 
@@ -173,7 +180,7 @@ function printableStayDocument(item, settings) {
         <div class="money"><span>Pago</span><strong>${currency(item.paid_amount)}</strong></div>
         <div class="money"><span>Saldo</span><strong>${currency(item.balance)}</strong></div>
       </div>
-      <div class="grid" style="margin-top:8px">
+      <div class="grid" style="margin-top:3px">
         <div class="field"><span>Desconto</span><strong>${currency(item.discount)}</strong></div>
         <div class="field"><span>Acréscimo</span><strong>${currency(item.surcharge)}</strong></div>
       </div>
@@ -181,18 +188,12 @@ function printableStayDocument(item, settings) {
 
     <section class="section">
       <h3>5. Consumos e lançamentos</h3>
-      <table>
-        <thead><tr><th>Descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead>
-        <tbody>${charges}</tbody>
-      </table>
+      <table><thead><tr><th>Descrição</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead><tbody>${charges}</tbody></table>
     </section>
 
     <section class="section">
       <h3>6. Pagamentos registrados</h3>
-      <table>
-        <thead><tr><th>Data</th><th>Forma de pagamento</th><th>Valor</th></tr></thead>
-        <tbody>${payments}</tbody>
-      </table>
+      <table><thead><tr><th>Data</th><th>Forma de pagamento</th><th>Valor</th></tr></thead><tbody>${payments}</tbody></table>
     </section>
 
     <section class="section">
@@ -206,19 +207,29 @@ function printableStayDocument(item, settings) {
 
     <div class="signatures">
       <div class="signature"><strong>${safe(item.guest_name)}</strong><span>Hóspede responsável</span></div>
-      <div class="signature"><strong>${safe(hotelName)}</strong><span>Responsável pelo hotel</span></div>
+      <div class="signature"><strong>${safe(checkInOperator)}</strong><span>Operador responsável · ${safe(hotelName)}</span></div>
     </div>
 
     <footer class="footer">
-      <p>Documento gerado pelo sistema em ${safe(issuedAt)}.</p>
-      <p>Este termo é um documento interno da hospedagem e não substitui o registro na FNRH Digital quando aplicável.</p>
+      <p>Documento gerado em ${safe(issuedAt)} · Impresso por ${safe(currentOperator)}.</p>
+      <p>Documento interno da hospedagem; não substitui o registro na FNRH Digital quando aplicável.</p>
     </footer>
   </main>
 </body>
 </html>`);
   printWindow.document.close();
-  printWindow.focus();
-  window.setTimeout(() => printWindow.print(), 250);
+
+  window.setTimeout(() => {
+    const documentElement = printWindow.document.querySelector(".document");
+    if (documentElement) {
+      const targetHeightPx = 1040;
+      const contentHeight = Math.max(documentElement.scrollHeight, 1);
+      const scale = Math.max(0.68, Math.min(1, targetHeightPx / contentHeight));
+      documentElement.style.zoom = String(scale);
+    }
+    printWindow.focus();
+    printWindow.print();
+  }, 180);
 }
 
 async function openStay(id) {
@@ -228,18 +239,21 @@ async function openStay(id) {
   ]);
   const hotel = settings?.hotel || {};
   const operational = operationalInformation(hotel);
+  const activeStay = ["active", "extended"].includes(item.status);
   const redraw = () => { drawer.close(); openStay(id); };
-  const stayActions = hasPermission("stays.write") ? `<button class="button button--ghost" data-extend>Estender</button><button class="button button--secondary" data-charge>Adicionar consumo</button>${hasPermission("payments.write") ? `<button class="button button--secondary" data-payment>Registrar pagamento</button>` : ""}<button class="button button--primary" data-checkout>Fazer check-out</button>` : "";
+  const stayActions = activeStay && hasPermission("stays.write") ? `<button class="button button--ghost" data-extend>Estender</button><button class="button button--secondary" data-charge>Adicionar consumo</button>${hasPermission("payments.write") ? `<button class="button button--secondary" data-payment>Registrar pagamento</button>` : ""}<button class="button button--primary" data-checkout>Fazer check-out</button>` : "";
+  const operatorInfo = item.checkin_operator_name || "Não identificado";
   const drawer = showDrawer({
     title: `Quarto ${item.room_number}`,
     eyebrow: `Hospedagem · ${item.reservation_code}`,
     content: `<div class="identity-cell"><span class="avatar">${initials(item.guest_name)}</span><div><h3>${escapeHtml(item.guest_name)}</h3><p class="muted">${escapeHtml(item.guest_cpf || "CPF não informado")} · ${escapeHtml(item.guest_phone || "telefone não informado")}</p></div></div>
-      <h3 class="section-title">Estadia</h3><div class="detail-grid">${detail("Situação", statusLabel(item.status))}${detail("Categoria", item.category_name)}${detail("Check-in", dateTime(item.check_in_at))}${detail("Saída prevista", longDate(item.expected_checkout_date))}${detail("Ocupação", `${item.adults} adulto(s) · ${item.children} criança(s)`)}${detail("Reserva", item.reservation_code)}</div>
+      <div class="toolbar" style="margin:14px 0 2px"><button class="button button--secondary" data-print-contract><i data-lucide="printer"></i>Imprimir termo</button></div>
+      <h3 class="section-title">Estadia</h3><div class="detail-grid">${detail("Situação", statusLabel(item.status))}${detail("Categoria", item.category_name)}${detail("Check-in", dateTime(item.check_in_at))}${detail("Saída prevista", longDate(item.expected_checkout_date))}${detail("Ocupação", `${item.adults} adulto(s) · ${item.children} criança(s)`)}${detail("Reserva", item.reservation_code)}${detail("Operador do check-in", operatorInfo)}${item.checkout_operator_name ? detail("Operador do check-out", item.checkout_operator_name) : ""}</div>
       <h3 class="section-title">Informações do hotel</h3><div class="detail-grid">${detail("Entrada padrão", operational.checkIn)}${detail("Saída padrão", operational.checkOut)}${detail("Limpeza estimada", operational.cleaning)}</div>
       <h3 class="section-title">Conta</h3><div class="detail-grid">${detail("Hospedagem", currency(item.lodging_amount))}${detail("Consumos", currency(item.charges_amount))}${detail("Pago", currency(item.paid_amount))}${detail("Saldo", currency(item.balance))}</div>
       <h3 class="section-title">Lançamentos</h3>${item.charges.length ? `<div class="timeline-list">${item.charges.map((charge) => `<div class="timeline-item"><strong>${escapeHtml(charge.description)} · ${currency(charge.total_amount)}</strong><span>${dateTime(charge.charged_at)} · ${charge.quantity} × ${currency(charge.unit_price)}</span></div>`).join("")}</div>` : `<p class="muted">Nenhum consumo lançado.</p>`}
       <h3 class="section-title">Pagamentos</h3>${item.payments.length ? `<div class="timeline-list">${item.payments.map((payment) => `<div class="timeline-item"><strong>${currency(payment.amount)} · ${escapeHtml(payment.payment_method)}</strong><span>${dateTime(payment.paid_at)} · ${escapeHtml(payment.user_name)}</span></div>`).join("")}</div>` : `<p class="muted">Nenhum pagamento registrado.</p>`}`,
-    footer: `<button class="button button--secondary" data-print-contract><i data-lucide="printer"></i>Imprimir contrato</button>${stayActions}`,
+    footer: stayActions,
     onMount(element, close) {
       element.querySelector("[data-print-contract]").addEventListener("click", () => printableStayDocument(item, settings));
       element.querySelector("[data-charge]")?.addEventListener("click", () => formModal({ title: "Adicionar consumo", content: `<div class="form-grid"><div class="field span-2"><label>Descrição *</label><input name="description" required maxlength="190" placeholder="Ex.: Frigobar"></div><div class="field"><label>Quantidade *</label><input name="quantity" type="number" min="0.01" step="0.01" value="1" required></div><div class="field"><label>Valor unitário *</label><input name="unitPrice" type="number" min="0.01" step="0.01" required></div></div>`, saveLabel: "Adicionar", onSave: async (data) => { await api.post(`/api/stays/${id}/charges`, data); toast("Consumo adicionado à conta."); redraw(); } }));
@@ -263,9 +277,9 @@ async function openStay(id) {
 
 async function render() {
   const items = await api.get("/api/stays", { tab: state.tab, q: state.q });
-  setMain(`<div class="page-shell"><div class="page-header"><div><p class="eyebrow">Hospedagens</p><h1>Hóspedes no hotel</h1><p>Acompanhe estadias ativas, saídas e contas em aberto.</p></div></div>
-    <div class="toolbar"><div class="tabs"><button class="tab${state.tab === "active" ? " is-active" : ""}" data-tab="active">Todas ativas</button><button class="tab${state.tab === "departures" ? " is-active" : ""}" data-tab="departures">Saídas de hoje</button><button class="tab${state.tab === "extended" ? " is-active" : ""}" data-tab="extended">Estendidas</button></div><span class="header-spacer"></span><input class="input" id="stay-search" placeholder="Hóspede, quarto ou reserva" value="${escapeHtml(state.q)}"></div>
-    <section class="card card--flush">${items.length ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Hóspede</th><th>Quarto</th><th>Check-in</th><th>Saída prevista</th><th>Situação</th><th>Saldo</th></tr></thead><tbody>${items.map((item) => `<tr data-clickable data-open="${item.id}" tabindex="0"><td><div class="identity-cell"><span class="avatar">${initials(item.guest_name)}</span><span><span class="cell-title">${escapeHtml(item.guest_name)}</span><span class="cell-subtitle">${escapeHtml(item.reservation_code)}</span></span></div></td><td><span class="cell-title">Quarto ${escapeHtml(item.room_number)}</span><span class="cell-subtitle">${escapeHtml(item.category_name)}</span></td><td>${shortDate(item.check_in_date)}</td><td><span class="cell-title">${longDate(item.expected_checkout_date)}</span></td><td><span class="badge status--${item.status}">${statusLabel(item.status)}</span></td><td><span class="cell-title">${currency(item.balance)}</span><span class="cell-subtitle">Total ${currency(item.total_amount)}</span></td></tr>`).join("")}</tbody></table></div>` : emptyState("Nenhuma hospedagem encontrada", "Não há estadias ativas para este filtro.", "bed-double")}</section>
+  setMain(`<div class="page-shell"><div class="page-header"><div><p class="eyebrow">Hospedagens</p><h1>Hóspedes no hotel</h1><p>Acompanhe estadias ativas, saídas, finalizadas e contas em aberto.</p></div></div>
+    <div class="toolbar"><div class="tabs"><button class="tab${state.tab === "active" ? " is-active" : ""}" data-tab="active">Todas ativas</button><button class="tab${state.tab === "departures" ? " is-active" : ""}" data-tab="departures">Saídas de hoje</button><button class="tab${state.tab === "extended" ? " is-active" : ""}" data-tab="extended">Estendidas</button><button class="tab${state.tab === "completed" ? " is-active" : ""}" data-tab="completed">Finalizadas</button></div><span class="header-spacer"></span><input class="input" id="stay-search" placeholder="Hóspede, quarto ou reserva" value="${escapeHtml(state.q)}"></div>
+    <section class="card card--flush">${items.length ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Hóspede</th><th>Quarto</th><th>Check-in</th><th>Saída prevista</th><th>Situação</th><th>Saldo</th></tr></thead><tbody>${items.map((item) => `<tr data-clickable data-open="${item.id}" tabindex="0"><td><div class="identity-cell"><span class="avatar">${initials(item.guest_name)}</span><span><span class="cell-title">${escapeHtml(item.guest_name)}</span><span class="cell-subtitle">${escapeHtml(item.reservation_code)}</span></span></div></td><td><span class="cell-title">Quarto ${escapeHtml(item.room_number)}</span><span class="cell-subtitle">${escapeHtml(item.category_name)}</span></td><td>${shortDate(item.check_in_date)}</td><td><span class="cell-title">${longDate(item.expected_checkout_date)}</span></td><td><span class="badge status--${item.status}">${statusLabel(item.status)}</span></td><td><span class="cell-title">${currency(item.balance)}</span><span class="cell-subtitle">Total ${currency(item.total_amount)}</span></td></tr>`).join("")}</tbody></table></div>` : emptyState("Nenhuma hospedagem encontrada", state.tab === "completed" ? "Não há hospedagens finalizadas para este filtro." : "Não há estadias ativas para este filtro.", "bed-double")}</section>
   </div>`);
   document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => { state.tab = button.dataset.tab; render(); }));
   document.querySelectorAll("[data-open]").forEach((row) => { row.addEventListener("click", () => openStay(row.dataset.open)); row.addEventListener("keydown", (event) => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); openStay(row.dataset.open); } }); });
@@ -279,7 +293,7 @@ export const staysView = {
       return;
     }
     if (params.tab === "checkout") state.tab = "departures";
-    if (params.tab && ["active", "departures", "extended"].includes(params.tab)) state.tab = params.tab;
+    if (params.tab && ["active", "departures", "extended", "completed"].includes(params.tab)) state.tab = params.tab;
     await render();
     if (params.open) openStay(params.open);
   },
