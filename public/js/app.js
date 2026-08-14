@@ -1,6 +1,7 @@
 import { api } from "./api.js";
 import { renderShell } from "./components/shell.js";
 import { installConfigurationPanels } from "./components/configuration-panels.js";
+import { installPrintActionFix } from "./components/print-action-fix.js";
 import { installReservationSourceEnhancer } from "./components/reservation-source-enhancer.js";
 import { installStayPrintEnhancer } from "./components/stay-print-enhancer.js";
 import { setState } from "./state.js";
@@ -13,6 +14,7 @@ async function boot() {
     setState(session);
     renderShell();
     installConfigurationPanels();
+    installPrintActionFix();
     installReservationSourceEnhancer();
     installStayPrintEnhancer();
     startRouter();
