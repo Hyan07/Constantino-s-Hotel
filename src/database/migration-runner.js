@@ -4,6 +4,7 @@ import mysql from "mysql2/promise";
 import { config, validateDatabaseConfig } from "../config/app-config.js";
 
 const migrationsDir = path.resolve(process.cwd(), "src/database/migrations");
+const connectionCharset = "utf8mb4_unicode_ci";
 
 async function migrationConnection() {
   validateDatabaseConfig();
@@ -13,7 +14,7 @@ async function migrationConnection() {
     database: config.database.name,
     user: config.database.user,
     password: config.database.password,
-    charset: "utf8mb4",
+    charset: connectionCharset,
     multipleStatements: true,
     dateStrings: true,
   });
