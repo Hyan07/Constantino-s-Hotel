@@ -6,10 +6,13 @@ import { currency, debounce, escapeHtml, initials, longDate, statusLabel } from 
 const state = { q: "", page: 1 };
 
 function guestFields(guest = {}) {
+  const emailField = guest.id
+    ? `<div class="field span-2"><label>E-mail <span class="muted">(opcional)</span></label><input name="email" type="email" value="${escapeHtml(guest.email || "")}" autocomplete="email"></div>`
+    : "";
   return `<div class="field span-2"><label>Nome completo *</label><input name="name" value="${escapeHtml(guest.name || "")}" required minlength="3" maxlength="180" autocomplete="name"></div>
     <div class="field"><label>CPF <span class="muted">(opcional)</span></label><input name="cpf" value="${escapeHtml(guest.cpf || "")}" inputmode="numeric" autocomplete="off" placeholder="Somente números"></div>
     <div class="field"><label>Telefone <span class="muted">(opcional)</span></label><input name="phone" value="${escapeHtml(guest.phone || "")}" autocomplete="tel"></div>
-    <div class="field span-2"><label>E-mail <span class="muted">(opcional)</span></label><input name="email" type="email" value="${escapeHtml(guest.email || "")}" autocomplete="email"></div>`;
+    ${emailField}`;
 }
 
 function guestModal(guest = null, afterSave = () => guestsView.render()) {
