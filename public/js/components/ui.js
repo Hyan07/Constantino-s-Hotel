@@ -2,6 +2,7 @@ import { escapeHtml } from "../utils/format.js";
 import { getState } from "../state.js";
 
 const overlayRoot = () => document.getElementById("overlay-root");
+let overlaySequence = 0;
 
 export function refreshIcons(root = document) {
   if (window.lucide) window.lucide.createIcons({ attrs: { "stroke-width": 1.8 }, root });
@@ -35,56 +36,96 @@ export function toast(message, { title = "Tudo certo", type = "success", duratio
   setTimeout(() => element.remove(), duration);
 }
 
-function closeOverlay(backdrop) {
-  backdrop.remove();
-  document.body.style.overflow = overlayRoot().children.length ? "hidden" : "";
+function setApplicationInert(inert) {
+  const app = document.getElementById("app");
+  if (!app) return;
+  if (inert) app.setAttribute("inert", "");
+  else app.removeAttribute("inert");
 }
 
-function overlayCloser(backdrop) {
+function closeOverlay(backdrop) {
+  backdrop.remove();
+  const hasOverlays = overlayRoot().children.length > 0;
+  document.body.style.overflow = hasOverlays ? "hidden" : "";
+  setApplicationInert(hasOverlays);
+}
+
+function overlayCloser(backdrop, { onClose } = {}) {
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   let closed = false;
-  const close = () => {
+  const close = (reason = "programmatic") => {
     if (closed) return;
     closed = true;
     window.removeEventListener("keydown", keydown);
     closeOverlay(backdrop);
+    onClose?.(reason);
+    queueMicrotask(() => {
+      if (opener?.isConnected) opener.focus();
+    });
   };
   const keydown = (event) => {
     if (overlayRoot().lastElementChild !== backdrop) return;
-    if (event.key === "Escape") return close();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close("escape");
+      return;
+    }
     if (event.key !== "Tab") return;
     const focusable = [...backdrop.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')];
-    if (!focusable.length) return;
+    if (!focusable.length) {
+      event.preventDefault();
+      backdrop.querySelector('[role="dialog"]')?.focus();
+      return;
+    }
     const first = focusable[0];
     const last = focusable.at(-1);
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    if (!backdrop.contains(document.activeElement)) {
+      event.preventDefault();
+      first.focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   };
   window.addEventListener("keydown", keydown);
   return close;
 }
 
-export function showDrawer({ title, eyebrow = "Detalhes", content, footer = "", onMount }) {
+export function showDrawer({ title, eyebrow = "Detalhes", content, footer = "", onMount, onClose }) {
   const backdrop = document.createElement("div");
+  const titleId = `drawer-title-${++overlaySequence}`;
   backdrop.className = "drawer-backdrop";
-  backdrop.innerHTML = `<aside class="drawer" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}"><header class="drawer__header"><div><p class="eyebrow">${escapeHtml(eyebrow)}</p><h2>${escapeHtml(title)}</h2></div><button class="icon-button" data-close aria-label="Fechar"><i data-lucide="x"></i></button></header><div class="drawer__body">${content}</div>${footer ? `<footer class="drawer__footer">${footer}</footer>` : ""}</aside>`;
+  backdrop.innerHTML = `<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="${titleId}" tabindex="-1"><header class="drawer__header"><div><p class="eyebrow">${escapeHtml(eyebrow)}</p><h2 id="${titleId}">${escapeHtml(title)}</h2></div><button class="icon-button" data-close aria-label="Fechar"><i data-lucide="x"></i></button></header><div class="drawer__body">${content}</div>${footer ? `<footer class="drawer__footer">${footer}</footer>` : ""}</aside>`;
   overlayRoot().append(backdrop);
   document.body.style.overflow = "hidden";
-  const close = overlayCloser(backdrop);
-  backdrop.addEventListener("click", (event) => { if (event.target === backdrop || event.target.closest("[data-close]")) close(); });
+  setApplicationInert(true);
+  const close = overlayCloser(backdrop, { onClose });
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) close("backdrop");
+    else if (event.target.closest("[data-close]")) close("close-button");
+  });
   refreshIcons(backdrop);
   onMount?.(backdrop, close);
   backdrop.querySelector("[data-close]")?.focus();
   return { element: backdrop, close };
 }
 
-export function showModal({ title, eyebrow = "", content, footer = "", wide = false, onMount }) {
+export function showModal({ title, eyebrow = "", content, footer = "", wide = false, onMount, onClose }) {
   const backdrop = document.createElement("div");
+  const titleId = `modal-title-${++overlaySequence}`;
   backdrop.className = "modal-backdrop";
-  backdrop.innerHTML = `<section class="modal${wide ? " modal--wide" : ""}" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}"><header class="modal__header"><div>${eyebrow ? `<p class="eyebrow">${escapeHtml(eyebrow)}</p>` : ""}<h2>${escapeHtml(title)}</h2></div><button class="icon-button" data-close aria-label="Fechar"><i data-lucide="x"></i></button></header><div class="modal__body">${content}</div>${footer ? `<footer class="modal__footer">${footer}</footer>` : ""}</section>`;
+  backdrop.innerHTML = `<section class="modal${wide ? " modal--wide" : ""}" role="dialog" aria-modal="true" aria-labelledby="${titleId}" tabindex="-1"><header class="modal__header"><div>${eyebrow ? `<p class="eyebrow">${escapeHtml(eyebrow)}</p>` : ""}<h2 id="${titleId}">${escapeHtml(title)}</h2></div><button class="icon-button" data-close aria-label="Fechar"><i data-lucide="x"></i></button></header><div class="modal__body">${content}</div>${footer ? `<footer class="modal__footer">${footer}</footer>` : ""}</section>`;
   overlayRoot().append(backdrop);
   document.body.style.overflow = "hidden";
-  const close = overlayCloser(backdrop);
-  backdrop.addEventListener("click", (event) => { if (event.target === backdrop || event.target.closest("[data-close]")) close(); });
+  setApplicationInert(true);
+  const close = overlayCloser(backdrop, { onClose });
+  backdrop.addEventListener("click", (event) => {
+    if (event.target === backdrop) close("backdrop");
+    else if (event.target.closest("[data-close]")) close("close-button");
+  });
   refreshIcons(backdrop);
   onMount?.(backdrop, close);
   backdrop.querySelector("[data-close]")?.focus();
@@ -93,16 +134,29 @@ export function showModal({ title, eyebrow = "", content, footer = "", wide = fa
 
 export function confirmDialog({ title, message, confirmLabel = "Confirmar", danger = false }) {
   return new Promise((resolve) => {
-    const modal = showModal({
+    let settled = false;
+    const finish = (value, close) => {
+      if (settled) return;
+      settled = true;
+      close(value ? "confirm" : "cancel");
+      resolve(value);
+    };
+    showModal({
       title,
       content: `<p class="muted">${escapeHtml(message)}</p>`,
       footer: `<button class="button button--ghost" data-cancel>Cancelar</button><button class="button ${danger ? "button--danger" : "button--primary"}" data-confirm>${escapeHtml(confirmLabel)}</button>`,
+      onClose() {
+        if (!settled) {
+          settled = true;
+          resolve(false);
+        }
+      },
       onMount(element, close) {
-        element.querySelector("[data-cancel]").addEventListener("click", () => { close(); resolve(false); });
-        element.querySelector("[data-confirm]").addEventListener("click", () => { close(); resolve(true); });
+        element.querySelector("[data-cancel]").addEventListener("click", () => finish(false, close));
+        element.querySelector("[data-confirm]").addEventListener("click", () => finish(true, close));
+        element.querySelector("[data-confirm]").focus();
       },
     });
-    modal.element.addEventListener("click", (event) => { if (event.target === modal.element) resolve(false); }, { once: true });
   });
 }
 
