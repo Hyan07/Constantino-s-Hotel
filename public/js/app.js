@@ -2,6 +2,7 @@ import { api } from "./api.js";
 import { renderShell } from "./components/shell.js";
 import { installConfigurationPanels } from "./components/configuration-panels.js";
 import { installPrintActionFix } from "./components/print-action-fix.js";
+import { installReservationReopen } from "./components/reservation-reopen.js";
 import { installReservationSourceEnhancer } from "./components/reservation-source-enhancer.js";
 import { installReservationWizardEnhancer } from "./components/reservation-wizard-enhancer.js";
 import { installStayPrintEnhancer } from "./components/stay-print-enhancer.js";
@@ -16,6 +17,7 @@ async function boot() {
     renderShell();
     installConfigurationPanels();
     installPrintActionFix();
+    installReservationReopen();
     installReservationSourceEnhancer();
     installReservationWizardEnhancer();
     installStayPrintEnhancer();
