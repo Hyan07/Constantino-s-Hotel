@@ -1,5 +1,5 @@
 import { api } from "../api.js";
-import { toast } from "./ui.js";
+import { confirmDialog, refreshIcons, toast } from "./ui.js";
 
 const visibleReservationStatuses = [
   ["pending", "Pendente"],
@@ -14,8 +14,27 @@ const legacyStatusAliases = {
   completed: "checked_in",
 };
 
+const statusDescriptions = {
+  pending: "Reserva criada, mas ainda não confirmada.",
+  confirmed: "Reserva confirmada e aguardando o check-in.",
+  cancelled: "Cancelamento realizado pela recepção.",
+  no_show: "O hóspede não compareceu para o check-in.",
+  checked_in: "O check-in foi realizado e a hospedagem foi iniciada.",
+};
+
+let lastReservationId = null;
+
 function canonicalStatus(status) {
   return legacyStatusAliases[status] || status;
+}
+
+function labelForStatus(status) {
+  return visibleReservationStatuses.find(([value]) => value === canonicalStatus(status))?.[1] || status;
+}
+
+function isReservationPage(root) {
+  const eyebrow = root.querySelector?.(".page-header .eyebrow")?.textContent?.trim();
+  return eyebrow === "Reservas" || Boolean(root.querySelector?.("#reservation-status")) || Boolean(root.querySelector?.(".hotel-calendar"));
 }
 
 function setStatusOptions(select, options, { includeAll = false } = {}) {
@@ -36,23 +55,29 @@ function setStatusOptions(select, options, { includeAll = false } = {}) {
   else if (includeAll) select.value = "";
 }
 
-function normalizeReservationInterface(root = document) {
-  root.querySelectorAll?.('[data-tab="completed"]').forEach((element) => element.remove());
+function normalizeLegacyReservationBadges(root) {
+  root.querySelectorAll?.(".status--awaiting_checkin").forEach((badge) => {
+    badge.classList.remove("status--awaiting_checkin");
+    badge.classList.add("status--confirmed");
+    badge.textContent = "Confirmada";
+  });
+  root.querySelectorAll?.(".status--completed").forEach((badge) => {
+    badge.classList.remove("status--completed");
+    badge.classList.add("status--checked_in");
+    badge.textContent = "Hospedado";
+  });
+}
 
-  const filter = root.querySelector?.("#reservation-status");
-  if (filter) setStatusOptions(filter, visibleReservationStatuses, { includeAll: true });
+function normalizeReservationInterface(root = document) {
+  if (isReservationPage(root)) {
+    root.querySelectorAll?.('[data-tab="completed"]').forEach((element) => element.remove());
+    const filter = root.querySelector?.("#reservation-status");
+    if (filter) setStatusOptions(filter, visibleReservationStatuses, { includeAll: true });
+    normalizeLegacyReservationBadges(root);
+  }
 
   root.querySelectorAll?.('#wizard-content select[name="status"]').forEach((select) => {
     const current = canonicalStatus(select.value);
-    if (["cancelled", "no_show"].includes(current)) {
-      const currentLabel = visibleReservationStatuses.find(([value]) => value === current)?.[1] || current;
-      setStatusOptions(select, [
-        [current, currentLabel],
-        ["pending", "Pendente"],
-        ["confirmed", "Confirmada"],
-      ]);
-      return;
-    }
     if (current === "checked_in") {
       setStatusOptions(select, [["checked_in", "Hospedado"]]);
       return;
@@ -64,22 +89,212 @@ function normalizeReservationInterface(root = document) {
   });
 }
 
-function installReservationInterfaceObserver() {
-  const roots = [document.getElementById("main-view"), document.getElementById("overlay-root")].filter(Boolean);
-  roots.forEach((root) => {
-    normalizeReservationInterface(root);
-    const observer = new window.MutationObserver(() => normalizeReservationInterface(root));
-    observer.observe(root, { childList: true, subtree: true });
-  });
+function reservationPayload(reservation, status) {
+  return {
+    guestId: reservation.guest_id,
+    roomId: reservation.room_id,
+    checkIn: reservation.check_in_date,
+    checkOut: reservation.check_out_date,
+    adults: reservation.adults,
+    children: reservation.children,
+    status,
+    dailyRate: reservation.daily_rate,
+    discount: reservation.discount,
+    surcharge: reservation.surcharge,
+    source: reservation.source,
+    notes: reservation.notes,
+  };
 }
 
-function reopenableReservationTarget(target) {
-  const item = target?.closest?.("[data-open]");
-  if (!item) return null;
-  const status = item.dataset.status
-    || (item.querySelector?.(".status--cancelled") ? "cancelled" : "")
-    || (item.querySelector?.(".status--no_show") ? "no_show" : "");
-  return ["cancelled", "no_show"].includes(status) ? item : null;
+async function saveRegularStatus(reservation, status) {
+  return api.put(`/api/reservations/${reservation.id}`, reservationPayload(reservation, status));
+}
+
+function closeReservationDrawer(backdrop) {
+  backdrop.querySelector("[data-close]")?.click();
+}
+
+function refreshReservations() {
+  window.dispatchEvent(new CustomEvent("app:navigate", {
+    detail: { route: "reservas" },
+  }));
+}
+
+async function changeReservationStatus(reservation, nextStatus, backdrop) {
+  const currentStatus = canonicalStatus(reservation.status);
+  const requestedStatus = canonicalStatus(nextStatus);
+
+  if (currentStatus === "checked_in") {
+    toast("Depois do check-in, as alterações operacionais devem ser feitas na Hospedagem correspondente.", {
+      title: "Reserva já hospedada",
+      type: "info",
+    });
+    return;
+  }
+
+  if (requestedStatus === currentStatus && reservation.status === requestedStatus) {
+    toast(`A reserva já está como ${labelForStatus(requestedStatus)}.`, { title: "Situação mantida", type: "info" });
+    return;
+  }
+
+  if (["pending", "confirmed"].includes(requestedStatus)) {
+    await saveRegularStatus(reservation, requestedStatus);
+    closeReservationDrawer(backdrop);
+    toast(`Situação alterada para ${labelForStatus(requestedStatus)}.`);
+    refreshReservations();
+    return;
+  }
+
+  if (requestedStatus === "cancelled") {
+    if (currentStatus === "no_show") {
+      toast("Reabra primeiro a reserva como Confirmada ou Pendente e depois faça o cancelamento.", {
+        title: "Reabertura necessária",
+        type: "info",
+      });
+      return;
+    }
+    const confirmed = await confirmDialog({
+      title: "Cancelar reserva",
+      message: `Alterar ${reservation.code} para Cancelada? A ação ficará registrada no histórico.`,
+      confirmLabel: "Cancelar reserva",
+      danger: true,
+    });
+    if (!confirmed) return;
+    await api.post(`/api/reservations/${reservation.id}/cancel`, { reason: "Cancelada pela recepção" });
+    closeReservationDrawer(backdrop);
+    toast("Reserva cancelada.");
+    refreshReservations();
+    return;
+  }
+
+  if (requestedStatus === "no_show") {
+    if (currentStatus === "cancelled") {
+      toast("Reabra primeiro a reserva como Confirmada ou Pendente e depois marque como Não compareceu.", {
+        title: "Reabertura necessária",
+        type: "info",
+      });
+      return;
+    }
+    const confirmed = await confirmDialog({
+      title: "Registrar não comparecimento",
+      message: `Confirmar que o hóspede da reserva ${reservation.code} não compareceu para o check-in?`,
+      confirmLabel: "Não compareceu",
+      danger: true,
+    });
+    if (!confirmed) return;
+    await api.post(`/api/reservations/${reservation.id}/no-show`);
+    closeReservationDrawer(backdrop);
+    toast("Reserva marcada como Não compareceu.");
+    refreshReservations();
+    return;
+  }
+
+  if (requestedStatus === "checked_in") {
+    if (currentStatus !== "confirmed") {
+      toast("Para realizar o check-in, primeiro deixe a reserva como Confirmada.", {
+        title: "Confirmação necessária",
+        type: "danger",
+      });
+      return;
+    }
+    if (!reservation.room_id) {
+      toast("Defina um quarto antes de realizar o check-in.", { title: "Quarto necessário", type: "danger" });
+      return;
+    }
+    const confirmed = await confirmDialog({
+      title: "Realizar check-in",
+      message: `Confirmar o check-in da reserva ${reservation.code}? A situação passará para Hospedado.`,
+      confirmLabel: "Fazer check-in",
+    });
+    if (!confirmed) return;
+    const stay = await api.post(`/api/reservations/${reservation.id}/check-in`);
+    closeReservationDrawer(backdrop);
+    toast("Check-in realizado. Reserva marcada como Hospedado.");
+    window.dispatchEvent(new CustomEvent("app:navigate", {
+      detail: { route: "hospedagens", params: { open: stay.id } },
+    }));
+  }
+}
+
+function normalizeDrawerStatusLabel(body, status) {
+  const statusItem = [...body.querySelectorAll(".detail-item")]
+    .find((item) => item.querySelector("span")?.textContent?.trim() === "Situação");
+  const value = statusItem?.querySelector("strong");
+  if (value) value.textContent = labelForStatus(status);
+}
+
+async function enhanceReservationDrawer(backdrop, reservationId) {
+  const drawer = backdrop?.querySelector?.(".drawer");
+  if (!drawer || drawer.dataset.reservationStatusEnhanced === "true") return;
+  const eyebrow = drawer.querySelector(".drawer__header .eyebrow")?.textContent?.trim();
+  if (eyebrow !== "Detalhes da reserva" || !reservationId) return;
+
+  drawer.dataset.reservationStatusEnhanced = "true";
+  const body = drawer.querySelector(".drawer__body");
+  if (!body) return;
+
+  try {
+    const reservation = await api.get(`/api/reservations/${reservationId}`);
+    const currentStatus = canonicalStatus(reservation.status);
+    normalizeDrawerStatusLabel(body, reservation.status);
+
+    const panel = document.createElement("section");
+    panel.className = "card";
+    panel.dataset.reservationStatusPanel = "true";
+    panel.style.margin = "16px 0";
+    panel.innerHTML = `<div class="card__body"><div class="field"><label for="reservation-direct-status-${reservation.id}">Situação da reserva</label><select id="reservation-direct-status-${reservation.id}" data-reservation-direct-status>${visibleReservationStatuses.map(([value, label]) => `<option value="${value}"${value === currentStatus ? " selected" : ""}>${label}</option>`).join("")}</select><p class="muted" data-status-description>${statusDescriptions[currentStatus] || ""}</p></div><button class="button button--secondary" data-save-reservation-status>Alterar situação</button></div>`;
+
+    const identity = body.querySelector(".identity-cell");
+    if (identity) identity.insertAdjacentElement("afterend", panel);
+    else body.prepend(panel);
+
+    const select = panel.querySelector("[data-reservation-direct-status]");
+    const description = panel.querySelector("[data-status-description]");
+    const save = panel.querySelector("[data-save-reservation-status]");
+
+    select.addEventListener("change", () => {
+      description.textContent = statusDescriptions[select.value] || "";
+    });
+    save.addEventListener("click", async () => {
+      save.disabled = true;
+      try {
+        await changeReservationStatus(reservation, select.value, backdrop);
+      } catch (error) {
+        save.disabled = false;
+        toast(error.message, { title: "Situação não alterada", type: "danger" });
+      }
+    });
+
+    drawer.querySelector("[data-cancel-reservation]")?.remove();
+    drawer.querySelector("[data-no-show]")?.remove();
+    refreshIcons(panel);
+  } catch (error) {
+    drawer.dataset.reservationStatusEnhanced = "false";
+    toast(error.message, { title: "Situação indisponível", type: "danger" });
+  }
+}
+
+function installReservationInterfaceObserver() {
+  const mainRoot = document.getElementById("main-view");
+  const overlayRoot = document.getElementById("overlay-root");
+
+  if (mainRoot) {
+    normalizeReservationInterface(mainRoot);
+    const mainObserver = new window.MutationObserver(() => normalizeReservationInterface(mainRoot));
+    mainObserver.observe(mainRoot, { childList: true, subtree: true });
+  }
+
+  if (overlayRoot) {
+    normalizeReservationInterface(overlayRoot);
+    const overlayObserver = new window.MutationObserver(() => {
+      normalizeReservationInterface(overlayRoot);
+      const backdrop = overlayRoot.lastElementChild;
+      if (backdrop?.classList?.contains("drawer-backdrop")) {
+        enhanceReservationDrawer(backdrop, lastReservationId);
+      }
+    });
+    overlayObserver.observe(overlayRoot, { childList: true, subtree: true });
+  }
 }
 
 function checkedInReservationTarget(target) {
@@ -115,36 +330,16 @@ async function openLinkedStay(reservationId) {
   }));
 }
 
-async function openReopenWizard(reservationId) {
-  const reservation = await api.get(`/api/reservations/${reservationId}`);
-  window.dispatchEvent(new CustomEvent("app:new-reservation", {
-    detail: { initial: reservation },
-  }));
-  toast("Altere a situação para Pendente ou Confirmada para reabrir a reserva.", {
-    title: "Reserva pode ser reaberta",
-    type: "info",
-  });
-}
-
-function interceptReopenableReservation(event) {
-  const item = reopenableReservationTarget(event.target);
+function interceptReservationActivation(event) {
+  const item = event.target?.closest?.("[data-open]");
   if (!item) return;
+  lastReservationId = item.dataset.open;
+
+  const checkedIn = checkedInReservationTarget(event.target);
+  if (!checkedIn) return;
+
   event.preventDefault();
   event.stopImmediatePropagation();
-
-  if (item.dataset.openingReopen === "true") return;
-  item.dataset.openingReopen = "true";
-  openReopenWizard(item.dataset.open)
-    .catch((error) => toast(error.message, { title: "Reserva não disponível", type: "danger" }))
-    .finally(() => { delete item.dataset.openingReopen; });
-}
-
-function interceptCheckedInReservation(event) {
-  const item = checkedInReservationTarget(event.target);
-  if (!item) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
-
   if (item.dataset.openingStay === "true") return;
   item.dataset.openingStay = "true";
   openLinkedStay(item.dataset.open)
@@ -154,16 +349,16 @@ function interceptCheckedInReservation(event) {
 
 function interceptReservationKey(event) {
   if (!["Enter", " "].includes(event.key)) return;
-  if (checkedInReservationTarget(event.target)) {
-    interceptCheckedInReservation(event);
-    return;
-  }
-  interceptReopenableReservation(event);
+  interceptReservationActivation(event);
 }
 
 export function installReservationReopen() {
   installReservationInterfaceObserver();
-  document.addEventListener("click", interceptReopenableReservation, true);
-  document.addEventListener("click", interceptCheckedInReservation, true);
+  window.addEventListener("app:navigate", (event) => {
+    if (event.detail?.route === "reservas" && event.detail?.params?.open) {
+      lastReservationId = String(event.detail.params.open);
+    }
+  });
+  document.addEventListener("click", interceptReservationActivation, true);
   document.addEventListener("keydown", interceptReservationKey, true);
 }
