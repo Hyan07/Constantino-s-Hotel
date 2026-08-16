@@ -9,15 +9,17 @@ test("calcula diárias e avança datas sem depender do horário local", () => {
   assert.throws(() => assertDateRange("2026-08-16", "2026-08-13"), /posterior/);
 });
 
-test("permite corrigir e reabrir reservas sem liberar estados de hospedagem", () => {
-  assert.equal(canTransitionReservation("pending", "awaiting_checkin"), true);
+test("mantém cinco situações de reserva e permite reabertura controlada", () => {
+  assert.equal(canTransitionReservation("pending", "confirmed"), true);
   assert.equal(canTransitionReservation("confirmed", "pending"), true);
-  assert.equal(canTransitionReservation("awaiting_checkin", "confirmed"), true);
+  assert.equal(canTransitionReservation("pending", "cancelled"), true);
+  assert.equal(canTransitionReservation("confirmed", "no_show"), true);
   assert.equal(canTransitionReservation("cancelled", "confirmed"), true);
   assert.equal(canTransitionReservation("cancelled", "pending"), true);
   assert.equal(canTransitionReservation("no_show", "confirmed"), true);
   assert.equal(canTransitionReservation("confirmed", "checked_in"), true);
   assert.equal(canTransitionReservation("checked_in", "confirmed"), false);
-  assert.equal(canTransitionReservation("completed", "confirmed"), false);
   assert.equal(canTransitionReservation("cancelled", "checked_in"), false);
+  assert.equal(canTransitionReservation("confirmed", "awaiting_checkin"), false);
+  assert.equal(canTransitionReservation("checked_in", "completed"), false);
 });

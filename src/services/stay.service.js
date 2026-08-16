@@ -42,8 +42,8 @@ export const stayService = {
     return withTransaction(async (connection) => {
       const reservation = await reservationRepository.findById(reservationId, connection, { forUpdate: true });
       if (!reservation) throw new AppError("RESERVATION_NOT_FOUND", "Reserva não encontrada.", 404);
-      if (!["confirmed", "awaiting_checkin"].includes(reservation.status)) {
-        throw new AppError("INVALID_RESERVATION_STATUS", "A reserva não está pronta para check-in.", 409);
+      if (reservation.status !== "confirmed") {
+        throw new AppError("INVALID_RESERVATION_STATUS", "A reserva não está confirmada para check-in.", 409);
       }
       if (!reservation.room_id) throw new AppError("ROOM_REQUIRED", "Defina um quarto antes do check-in.", 409);
       const room = await reservationRepository.lockRoom(reservation.room_id, connection);
@@ -153,13 +153,12 @@ export const stayService = {
         throw new AppError("OUTSTANDING_BALANCE", `Ainda existe saldo de R$ ${balance.toFixed(2).replace(".", ",")}.`, 409, { balance });
       }
       await stayRepository.complete(stayId, actor.id, connection);
-      await reservationRepository.updateStatus(stay.reservation_id, "completed", actor.id, connection);
       await roomRepository.updateStatus(stay.room_id, "awaiting_cleaning", connection);
       const cleaningTaskId = await roomRepository.createCleaningTask({
         roomId: stay.room_id, status: "pending", notes, userId: actor.id,
       }, connection);
       await reservationRepository.addHistory({
-        reservationId: stay.reservation_id, action: "check_out", fromStatus: "checked_in", toStatus: "completed",
+        reservationId: stay.reservation_id, action: "check_out",
         description: `Check-out concluído; quarto ${stay.room_number} aguardando limpeza`, metadata: { stayId, cleaningTaskId }, userId: actor.id,
       }, connection);
       await auditRepository.log({
