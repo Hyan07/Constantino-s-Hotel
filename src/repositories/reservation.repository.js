@@ -1,6 +1,6 @@
 import { getPool } from "../database/pool.js";
 
-const activeReservationStatuses = "'pending','confirmed','awaiting_checkin','checked_in'";
+const activeReservationStatuses = "'pending','confirmed','checked_in'";
 
 export const reservationRepository = {
   async list(filters) {
@@ -34,9 +34,9 @@ export const reservationRepository = {
     }
     if (filters.withoutRoom) clauses.push("r.room_id IS NULL");
     if (filters.tab === "today") { clauses.push("? >= r.check_in_date AND ? < r.check_out_date"); params.push(filters.today, filters.today); }
-    if (filters.tab === "upcoming") { clauses.push("r.check_in_date > ? AND r.status IN ('pending','confirmed','awaiting_checkin')"); params.push(filters.today); }
+    if (filters.tab === "upcoming") { clauses.push("r.check_in_date > ? AND r.status IN ('pending','confirmed')"); params.push(filters.today); }
     if (filters.tab === "checked_in") clauses.push("r.status = 'checked_in'");
-    if (filters.tab === "completed") clauses.push("r.status = 'completed'");
+    if (filters.tab === "completed") clauses.push("1=0");
     if (filters.tab === "cancelled") clauses.push("r.status = 'cancelled'");
     const where = clauses.join(" AND ");
     const [[count]] = await getPool().execute(
@@ -242,7 +242,7 @@ export const reservationRepository = {
         r.adults, r.children, g.name AS guest_name, rm.number AS room_number
        FROM reservations r JOIN guests g ON g.id=r.guest_id
        LEFT JOIN rooms rm ON rm.id=r.room_id
-       WHERE r.check_in_date < ? AND r.check_out_date > ? AND r.status <> 'cancelled'
+       WHERE r.check_in_date < ? AND r.check_out_date > ? AND r.status IN (${activeReservationStatuses})
        ORDER BY r.check_in_date, r.id`,
       [to, from],
     );
