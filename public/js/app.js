@@ -2,7 +2,7 @@ import { api } from "./api.js";
 import { renderShell } from "./components/shell.js";
 import { installConfigurationPanels } from "./components/configuration-panels.js";
 import { installPrintActionFix } from "./components/print-action-fix.js";
-import { installReservationReopen } from "./components/reservation-reopen.js?v=20260816-2";
+import { installReservationReopen } from "./components/reservation-reopen.js?v=20260817-3";
 import { installReservationSourceEnhancer } from "./components/reservation-source-enhancer.js";
 import { installReservationWizardEnhancer } from "./components/reservation-wizard-enhancer.js?v=20260817-1";
 import { installStayPrintEnhancer } from "./components/stay-print-enhancer.js";
