@@ -1,6 +1,6 @@
 import { api } from "../api.js";
 import { escapeHtml } from "../utils/format.js";
-import { toast } from "./ui.js";
+import { refreshIcons, toast } from "./ui.js";
 
 const modalState = new WeakMap();
 const editableStatuses = [
@@ -231,7 +231,13 @@ function enhanceReservationDrawers(root) {
     const eyebrow = drawer.querySelector(".eyebrow")?.textContent?.trim();
     if (eyebrow !== "Detalhes da reserva") return;
     const edit = drawer.querySelector("[data-edit]");
-    if (edit && edit.textContent !== "Editar reserva / situação") edit.textContent = "Editar reserva / situação";
+    if (!edit || edit.dataset.minimalEdit === "true") return;
+    edit.dataset.minimalEdit = "true";
+    edit.className = "icon-button";
+    edit.setAttribute("aria-label", "Editar reserva");
+    edit.setAttribute("title", "Editar reserva");
+    edit.innerHTML = '<i data-lucide="pencil"></i>';
+    refreshIcons(edit);
   });
 }
 
