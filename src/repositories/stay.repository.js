@@ -78,6 +78,13 @@ export const stayRepository = {
       "UPDATE stays SET status='completed', check_out_at=NOW(), checkout_by=? WHERE id=?",
       [userId, id],
     );
+    await connection.execute(
+      `UPDATE reservations r
+       JOIN stays s ON s.reservation_id=r.id
+       SET r.status='completed', r.updated_by=?
+       WHERE s.id=? AND r.status='checked_in'`,
+      [userId, id],
+    );
   },
 
   async extend(id, newCheckoutDate, connection) {
