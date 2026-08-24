@@ -73,10 +73,41 @@
 
 .detail-item .badge {
   display: inline-flex;
-  color: inherit;
   font-size: 0.65rem;
   text-transform: none;
   letter-spacing: normal;
+}
+
+.detail-item .badge--success,
+.detail-item .status--available,
+.detail-item .status--completed,
+.detail-item .status--confirmed {
+  color: var(--success);
+}
+
+.detail-item .badge--warning,
+.detail-item .status--pending,
+.detail-item .status--awaiting_cleaning,
+.detail-item .status--reserved,
+.detail-item .status--awaiting_checkin {
+  color: var(--warning);
+}
+
+.detail-item .badge--danger,
+.detail-item .status--cancelled,
+.detail-item .status--maintenance,
+.detail-item .status--blocked,
+.detail-item .status--no_show {
+  color: var(--danger);
+}
+
+.detail-item .badge--info,
+.detail-item .status--occupied,
+.detail-item .status--checked_in,
+.detail-item .status--cleaning,
+.detail-item .status--active,
+.detail-item .status--extended {
+  color: var(--info);
 }
 
 /* Identidade de hospede: avatar e textos sempre no mesmo eixo. */
