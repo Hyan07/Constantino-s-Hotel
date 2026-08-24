@@ -189,7 +189,13 @@ function enhanceWizard(wizard) {
     else wizard.prepend(host);
   }
 
-  const editing = backdrop.querySelector(".modal__header h2")?.textContent?.trim().startsWith("Editar ");
+  const editing = Boolean(backdrop.querySelector(".modal__header h2")?.textContent?.trim().startsWith("Editar "));
+  const signature = state.selectedGuest
+    ? `guest:${state.selectedGuest.id}:${state.selectedGuest.name}:${state.selectedGuest.cpf}:${state.selectedGuest.phone}`
+    : `empty:${editing}`;
+
+  if (host.dataset.renderSignature === signature) return;
+  host.dataset.renderSignature = signature;
   host.innerHTML = compactGuestMarkup(state, editing);
   host.querySelector("[data-open-guest-picker]")?.addEventListener("click", () => openGuestPicker(wizard, state));
   refreshIcons(host);
