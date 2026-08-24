@@ -9,6 +9,7 @@ import { enforceSameOrigin } from "./middleware/same-origin.js";
 import { authenticate, verifyCsrf } from "./middleware/authentication.js";
 import { errorHandler, notFound } from "./middleware/error-handler.js";
 import { getPool } from "./database/pool.js";
+import { publishSuccessfulMutation, realtimeEvents } from "./realtime/change-stream.js";
 import authRoutes from "./routes/auth.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import guestRoutes from "./routes/guest.routes.js";
@@ -78,6 +79,8 @@ export function createApp() {
   app.get("/vendor/lucide.min.js", (_req, res) => res.sendFile(lucideFile));
   app.use("/api/auth", authRoutes);
   app.use("/api", authenticate, verifyCsrf);
+  app.get("/api/events", realtimeEvents);
+  app.use("/api", publishSuccessfulMutation);
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/guests", guestRoutes);
   app.use("/api/rooms", roomRoutes);
