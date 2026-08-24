@@ -21,11 +21,19 @@ let rendering = false;
 let queuedRender = null;
 let realtimeTimer = null;
 let refreshAfterOverlay = false;
+let refreshAfterInteraction = false;
 
 function parseHash() {
   const raw = window.location.hash.replace(/^#\/?/, "") || "dashboard";
   const [route, query = ""] = raw.split("?");
   return { route: routes[route] ? route : "dashboard", params: Object.fromEntries(new URLSearchParams(query)) };
+}
+
+function isEditingMainContent() {
+  const main = document.getElementById("main-view");
+  const active = document.activeElement;
+  if (!main || !active || !main.contains(active)) return false;
+  return active.matches("input, textarea, select, [contenteditable='true']");
 }
 
 async function renderRoute({ showLoading = true, realtime = false } = {}) {
@@ -69,6 +77,11 @@ function scheduleRealtimeRefresh() {
   const overlayRoot = document.getElementById("overlay-root");
   if (overlayRoot?.children.length) refreshAfterOverlay = true;
 
+  if (isEditingMainContent()) {
+    refreshAfterInteraction = true;
+    return;
+  }
+
   clearTimeout(realtimeTimer);
   realtimeTimer = window.setTimeout(() => {
     realtimeTimer = null;
@@ -88,6 +101,17 @@ function watchOverlays() {
   observer.observe(overlayRoot, { childList: true });
 }
 
+function watchActiveFields() {
+  document.addEventListener("focusout", () => {
+    if (!refreshAfterInteraction) return;
+    window.setTimeout(() => {
+      if (isEditingMainContent()) return;
+      refreshAfterInteraction = false;
+      scheduleRealtimeRefresh();
+    }, 0);
+  });
+}
+
 export function startRouter() {
   window.addEventListener("hashchange", () => renderRoute());
   window.addEventListener("app:navigate", (event) => {
@@ -96,5 +120,6 @@ export function startRouter() {
   });
   window.addEventListener("app:data-changed", scheduleRealtimeRefresh);
   watchOverlays();
+  watchActiveFields();
   renderRoute();
 }
