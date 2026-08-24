@@ -2,8 +2,8 @@ import { api } from "./api.js";
 import { renderShell } from "./components/shell.js";
 import { installConfigurationPanels } from "./components/configuration-panels.js";
 import { installPrintActionFix } from "./components/print-action-fix.js";
-import { installReservationFlowEnhancer } from "./components/reservation-flow-enhancer.js?v=20260824-1";
-import { installReservationReopen } from "./components/reservation-reopen.js?v=20260817-3";
+import { installReservationFlowEnhancer } from "./components/reservation-flow-enhancer.js?v=20260824-2";
+import { installReservationReopen } from "./components/reservation-reopen.js?v=20260824-2";
 import { installReservationSourceEnhancer } from "./components/reservation-source-enhancer.js";
 import { installReservationWizardEnhancer } from "./components/reservation-wizard-enhancer.js?v=20260817-1";
 import { installStayPrintEnhancer } from "./components/stay-print-enhancer.js";
@@ -17,6 +17,12 @@ function installReservationWizardNavigationLabels() {
   root.dataset.reservationWizardNavigationLabels = "true";
 
   const updateLabels = () => {
+    root.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+      if (backdrop.querySelector("#wizard-content")) {
+        backdrop.querySelector(".modal")?.classList.add("modal--reservation-wizard");
+      }
+    });
+
     root.querySelectorAll("[data-wizard-back]").forEach((button) => {
       if (button.textContent.trim() !== "Etapa anterior") button.textContent = "Etapa anterior";
       button.setAttribute("aria-label", "Voltar para a etapa anterior do formulário");
