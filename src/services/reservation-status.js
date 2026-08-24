@@ -1,7 +1,8 @@
 const transitions = {
   pending: new Set(["confirmed", "cancelled"]),
   confirmed: new Set(["pending", "checked_in", "cancelled", "no_show"]),
-  checked_in: new Set(),
+  checked_in: new Set(["completed"]),
+  completed: new Set(),
   cancelled: new Set(),
   no_show: new Set(),
 };
