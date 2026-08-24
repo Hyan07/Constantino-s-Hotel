@@ -7,6 +7,7 @@ import { installReservationReopen } from "./components/reservation-reopen.js?v=2
 import { installReservationSourceEnhancer } from "./components/reservation-source-enhancer.js";
 import { installReservationWizardEnhancer } from "./components/reservation-wizard-enhancer.js?v=20260817-1";
 import { installStayPrintEnhancer } from "./components/stay-print-enhancer.js";
+import { startRealtimeSync } from "./realtime.js?v=20260824-1";
 import { setState } from "./state.js";
 import { startRouter } from "./router.js";
 import { escapeHtml } from "./utils/format.js";
@@ -57,6 +58,7 @@ async function boot() {
     installReservationWizardNavigationLabels();
     installStayPrintEnhancer();
     startRouter();
+    startRealtimeSync();
   } catch (error) {
     if (error.status === 401) return;
     const app = document.getElementById("app");
