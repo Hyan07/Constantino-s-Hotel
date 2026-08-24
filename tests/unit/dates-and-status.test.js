@@ -9,7 +9,7 @@ test("calcula diárias e avança datas sem depender do horário local", () => {
   assert.throws(() => assertDateRange("2026-08-16", "2026-08-13"), /posterior/);
 });
 
-test("mantém cinco situações de reserva com fluxo operacional fechado", () => {
+test("mantém fluxo operacional da reserva até a finalização", () => {
   assert.equal(canTransitionReservation("pending", "confirmed"), true);
   assert.equal(canTransitionReservation("confirmed", "pending"), true);
   assert.equal(canTransitionReservation("pending", "cancelled"), true);
@@ -17,10 +17,11 @@ test("mantém cinco situações de reserva com fluxo operacional fechado", () =>
   assert.equal(canTransitionReservation("confirmed", "cancelled"), true);
   assert.equal(canTransitionReservation("confirmed", "no_show"), true);
   assert.equal(canTransitionReservation("confirmed", "checked_in"), true);
+  assert.equal(canTransitionReservation("checked_in", "completed"), true);
+  assert.equal(canTransitionReservation("completed", "confirmed"), false);
   assert.equal(canTransitionReservation("cancelled", "confirmed"), false);
   assert.equal(canTransitionReservation("cancelled", "pending"), false);
   assert.equal(canTransitionReservation("no_show", "confirmed"), false);
   assert.equal(canTransitionReservation("checked_in", "confirmed"), false);
   assert.equal(canTransitionReservation("confirmed", "awaiting_checkin"), false);
-  assert.equal(canTransitionReservation("checked_in", "completed"), false);
 });
