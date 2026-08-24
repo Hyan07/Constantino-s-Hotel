@@ -11,7 +11,6 @@ const visibleReservationStatuses = [
 
 const legacyStatusAliases = {
   awaiting_checkin: "confirmed",
-  completed: "checked_in",
 };
 
 function canonicalStatus(status) {
@@ -55,12 +54,6 @@ function normalizeLegacyReservationBadges(root) {
     badge.classList.add("status--confirmed");
     badge.textContent = "Confirmada";
   });
-
-  root.querySelectorAll?.(".status--completed").forEach((badge) => {
-    badge.classList.remove("status--completed");
-    badge.classList.add("status--checked_in");
-    badge.textContent = "Hospedado";
-  });
 }
 
 function normalizeReservationInterface(root = document) {
@@ -75,6 +68,11 @@ function normalizeReservationInterface(root = document) {
     const current = canonicalStatus(select.value);
     if (current === "checked_in") {
       setStatusOptions(select, [["checked_in", "Hospedado"]]);
+      return;
+    }
+
+    if (current === "completed") {
+      setStatusOptions(select, [["completed", "Finalizada"]]);
       return;
     }
 
