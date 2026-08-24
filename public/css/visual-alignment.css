@@ -25,9 +25,14 @@
 .header-action svg,
 .nav-link svg,
 .account-menu button svg,
-.search-result > svg {
+.search-result > svg,
+.room-card__guest svg,
+.movement-item > svg,
+.guest-picker-result > svg {
+  display: block;
   flex: 0 0 auto;
   align-self: center;
+  vertical-align: middle;
 }
 
 /* Abas e controles segmentados. */
@@ -167,20 +172,23 @@
 .movement-item > svg {
   width: 16px;
   height: 16px;
-  flex: 0 0 16px;
+  flex-basis: 16px;
   color: var(--text-muted);
 }
 
 /* Mapa de quartos: icones de hospede/reserva proporcionais ao texto. */
 .room-card__guest {
   min-width: 0;
+  overflow: hidden;
   line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .room-card__guest svg {
   width: 15px;
   height: 15px;
-  flex: 0 0 15px;
+  flex-basis: 15px;
 }
 
 .room-card__top .badge {
@@ -197,6 +205,7 @@
 }
 
 .legend-item::before {
+  align-self: center;
   flex: 0 0 7px;
 }
 
