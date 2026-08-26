@@ -62,8 +62,55 @@ async function settings() {
   const values = await api.get("/api/admin/settings");
   const hotel = objectValue(values.hotel, {});
   const methods = objectValue(values.payment_methods, ["Pix", "Dinheiro", "Cartão de crédito", "Cartão de débito"]);
-  adminShell(`<section class="card"><form id="settings-form"><div class="settings-section"><h2>Dados do hotel</h2><div class="form-grid"><div class="field"><label>Nome</label><input name="hotelName" value="${escapeHtml(hotel.name || "Constantino's Hotel")}" required></div><div class="field"><label>Telefone</label><input name="phone" value="${escapeHtml(hotel.phone || "")}"></div><div class="field"><label>E-mail</label><input name="email" type="email" value="${escapeHtml(hotel.email || "")}"></div><div class="field"><label>Horário padrão de check-in</label><input name="checkInTime" type="time" value="${escapeHtml(hotel.checkInTime || "14:00")}"></div><div class="field"><label>Horário padrão de check-out</label><input name="checkOutTime" type="time" value="${escapeHtml(hotel.checkOutTime || "12:00")}"></div><div class="field"><label>Moeda</label><select name="currency"><option value="BRL" selected>Real brasileiro (BRL)</option></select></div><div class="field"><label>Fuso horário</label><input name="timezone" value="${escapeHtml(hotel.timezone || "America/Sao_Paulo")}" required></div><div class="field span-2"><label>Endereço</label><input name="address" value="${escapeHtml(hotel.address || "")}"></div></div></div><div class="settings-section"><h2>Formas de pagamento</h2><div class="field"><label>Uma por linha</label><textarea name="paymentMethods">${escapeHtml(methods.join("\n"))}</textarea></div></div><div class="settings-section"><button class="button button--primary" type="submit">Salvar configurações</button></div></form></section>`);
-  document.querySelector("#settings-form").addEventListener("submit", async (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); try { await api.put("/api/admin/settings", { hotel: { name: data.hotelName, phone: data.phone, email: data.email, checkInTime: data.checkInTime, checkOutTime: data.checkOutTime, currency: data.currency, timezone: data.timezone, address: data.address }, payment_methods: data.paymentMethods.split("\n").map((item) => item.trim()).filter(Boolean) }); toast("Configurações salvas."); } catch (error) { toast(error.message, { title: "Configurações não salvas", type: "danger" }); } });
+  adminShell(`<section class="card"><form id="settings-form">
+    <div class="settings-section"><h2>Identificação do hotel</h2><div class="form-grid">
+      <div class="field"><label>Nome comercial</label><input name="hotelName" value="${escapeHtml(hotel.name || "Constantino's Hotel")}" required></div>
+      <div class="field"><label>Razão social</label><input name="legalName" maxlength="180" value="${escapeHtml(hotel.legalName || "")}" placeholder="Opcional"></div>
+      <div class="field"><label>CNPJ</label><input name="cnpj" maxlength="18" value="${escapeHtml(hotel.cnpj || "")}" placeholder="Numérico ou alfanumérico"></div>
+      <div class="field"><label>Telefone</label><input name="phone" value="${escapeHtml(hotel.phone || "")}"></div>
+      <div class="field"><label>E-mail</label><input name="email" type="email" value="${escapeHtml(hotel.email || "")}"></div>
+      <div class="field"><label>Moeda</label><select name="currency"><option value="BRL" selected>Real brasileiro (BRL)</option></select></div>
+      <div class="field span-2"><label>Endereço</label><input name="address" value="${escapeHtml(hotel.address || "")}"></div>
+    </div></div>
+    <div class="settings-section"><h2>Operação da hospedagem</h2><div class="form-grid">
+      <div class="field"><label>Horário padrão de check-in</label><input name="checkInTime" type="time" value="${escapeHtml(hotel.checkInTime || "14:00")}"></div>
+      <div class="field"><label>Horário padrão de check-out</label><input name="checkOutTime" type="time" value="${escapeHtml(hotel.checkOutTime || "12:00")}"></div>
+      <div class="field"><label>Tempo estimado de limpeza/organização</label><input name="cleaningEstimateMinutes" type="number" min="1" max="180" step="1" value="${escapeHtml(hotel.cleaningEstimateMinutes ?? "")}" placeholder="Ex.: 120"><span class="muted">Em minutos, até 180.</span></div>
+      <div class="field"><label>Fuso horário</label><input name="timezone" value="${escapeHtml(hotel.timezone || "America/Sao_Paulo")}" required></div>
+      <div class="field span-2"><label>Condições de hospedagem</label><textarea name="hostingTerms" maxlength="5000" placeholder="Ex.: regras de horário, silêncio, visitantes, danos e outras condições próprias do hotel.">${escapeHtml(hotel.hostingTerms || "")}</textarea><span class="muted">Esse texto será incluído no termo impresso quando preenchido.</span></div>
+      <div class="field span-2"><label>Aviso resumido de privacidade</label><textarea name="privacyNotice" maxlength="2000" placeholder="Explique de forma simples como os dados do hóspede são usados e protegidos.">${escapeHtml(hotel.privacyNotice || "")}</textarea></div>
+      <p class="form-alert span-2">Os horários de entrada/saída e o tempo estimado de limpeza aparecem no termo de hospedagem. Revise as condições comerciais e o aviso de privacidade antes do uso definitivo.</p>
+    </div></div>
+    <div class="settings-section"><h2>Formas de pagamento</h2><div class="field"><label>Uma por linha</label><textarea name="paymentMethods">${escapeHtml(methods.join("\n"))}</textarea></div></div>
+    <div class="settings-section"><button class="button button--primary" type="submit">Salvar configurações</button></div>
+  </form></section>`);
+  document.querySelector("#settings-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = Object.fromEntries(new FormData(event.currentTarget));
+    try {
+      await api.put("/api/admin/settings", {
+        hotel: {
+          name: data.hotelName,
+          legalName: data.legalName,
+          cnpj: data.cnpj,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+          checkInTime: data.checkInTime,
+          checkOutTime: data.checkOutTime,
+          cleaningEstimateMinutes: data.cleaningEstimateMinutes,
+          hostingTerms: data.hostingTerms,
+          privacyNotice: data.privacyNotice,
+          currency: data.currency,
+          timezone: data.timezone,
+        },
+        payment_methods: data.paymentMethods.split("\n").map((item) => item.trim()).filter(Boolean),
+      });
+      toast("Configurações salvas.");
+    } catch (error) {
+      toast(error.message, { title: "Configurações não salvas", type: "danger" });
+    }
+  });
 }
 
 async function audit() {

@@ -1,0 +1,273 @@
+/* Camada final de alinhamento visual.
+   Mantem icones, textos, badges e controles no mesmo eixo entre modulos. */
+
+/* Controles interativos: mesma referencia de altura e alinhamento. */
+.button,
+.field input,
+.field select,
+.input,
+.tab {
+  min-height: 42px;
+}
+
+.button,
+.tab,
+.segmented button,
+.header-action,
+.nav-link,
+.account-menu button,
+.search-result {
+  line-height: 1.15;
+}
+
+.button svg,
+.segmented button svg,
+.header-action svg,
+.nav-link svg,
+.account-menu button svg,
+.search-result > svg,
+.room-card__guest svg,
+.movement-item > svg,
+.guest-picker-result > svg {
+  display: block;
+  flex: 0 0 auto;
+  align-self: center;
+  vertical-align: middle;
+}
+
+/* Abas e controles segmentados. */
+.tabs,
+.segmented {
+  align-items: center;
+}
+
+.tab,
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Badges/pilulas: impedir que estilos de textos internos deformem o componente. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  vertical-align: middle;
+}
+
+.detail-item > span:first-child {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-item > strong {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  margin-top: 5px;
+  line-height: 1.35;
+}
+
+.detail-item .badge {
+  display: inline-flex;
+  font-size: 0.65rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.detail-item .badge--success,
+.detail-item .status--available,
+.detail-item .status--completed,
+.detail-item .status--confirmed {
+  color: var(--success);
+}
+
+.detail-item .badge--warning,
+.detail-item .status--pending,
+.detail-item .status--awaiting_cleaning,
+.detail-item .status--reserved,
+.detail-item .status--awaiting_checkin {
+  color: var(--warning);
+}
+
+.detail-item .badge--danger,
+.detail-item .status--cancelled,
+.detail-item .status--maintenance,
+.detail-item .status--blocked,
+.detail-item .status--no_show {
+  color: var(--danger);
+}
+
+.detail-item .badge--info,
+.detail-item .status--occupied,
+.detail-item .status--checked_in,
+.detail-item .status--cleaning,
+.detail-item .status--active,
+.detail-item .status--extended {
+  color: var(--info);
+}
+
+/* Identidade de hospede: avatar e textos sempre no mesmo eixo. */
+.identity-cell {
+  min-width: 0;
+}
+
+.identity-cell > span:last-child,
+.identity-cell > div {
+  min-width: 0;
+}
+
+.avatar {
+  margin: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+/* Dashboard - evita que a regra generica de spans altere o avatar. */
+.movement-item {
+  min-height: 52px;
+}
+
+.movement-item > .avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  margin: 0;
+  border-radius: 50%;
+  background: var(--brand-100);
+  color: var(--brand-800);
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.movement-item__content > strong,
+.movement-item__content > span {
+  display: block;
+}
+
+.movement-item__content > strong {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.movement-item__content > span {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  line-height: 1.3;
+}
+
+.movement-item > svg {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
+  color: var(--text-muted);
+}
+
+/* Mapa de quartos: icones de hospede/reserva proporcionais ao texto. */
+.room-card__guest {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-card__guest svg {
+  width: 15px;
+  height: 15px;
+  flex-basis: 15px;
+}
+
+.room-card__top .badge {
+  align-self: center;
+}
+
+.status-legend {
+  align-items: center;
+}
+
+.legend-item {
+  align-items: center;
+  line-height: 1.2;
+}
+
+.legend-item::before {
+  align-self: center;
+  flex: 0 0 7px;
+}
+
+/* Cards e cabecalhos: titulos e formas preservam o mesmo eixo visual. */
+.card__header > *,
+.page-header__actions,
+.pagination__controls {
+  min-width: 0;
+}
+
+.reservation-card__top {
+  align-items: flex-start;
+}
+
+.reservation-card__top .badge {
+  margin-top: 1px;
+}
+
+/* Toolbars: inputs, selects e botoes ficam nivelados. */
+.toolbar > .button,
+.toolbar > .input,
+.toolbar > select.input,
+.toolbar > input.input {
+  min-height: 42px;
+}
+
+/* Busca global e menus com icone + texto. */
+.search-result {
+  align-items: center;
+}
+
+.search-result > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.search-result > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.account-menu button {
+  align-items: center;
+}
+
+/* Rodapes de modal/gaveta: controles com baseline consistente. */
+.modal__footer,
+.drawer__footer {
+  align-items: center;
+}
+
+/* Em telas pequenas, preservar o alinhamento sem forcar larguras. */
+@media (max-width: 680px) {
+  .button,
+  .tab,
+  .field input,
+  .field select,
+  .input {
+    min-height: 44px;
+  }
+
+  .pagination {
+    align-items: stretch;
+  }
+}

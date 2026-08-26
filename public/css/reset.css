@@ -10,7 +10,7 @@ h1, h2, h3, h4, p { margin-top: 0; }
 table { border-collapse: collapse; border-spacing: 0; }
 [hidden] { display: none !important; }
 ::selection { background: var(--brand-200); color: var(--brand-950); }
-:focus-visible { outline: 3px solid rgb(46 98 143 / 35%); outline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--brand-600); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }

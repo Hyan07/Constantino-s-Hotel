@@ -43,7 +43,9 @@ No hPanel, em **Websites → Dashboard → Databases/Management**, crie banco e 
 10. Não configure output directory; o Express serve `public/`.
 11. Conecte o domínio de produção e ative HTTPS.
 
-Defina variáveis no painel, nunca no GitHub:
+Defina variáveis no painel, nunca no GitHub. O bloco SMTP é opcional; sem ele,
+a recuperação de senha por e-mail fica indisponível e o administrador ainda
+pode redefinir o acesso do usuário:
 
 ```dotenv
 APP_ENV=production

@@ -3,6 +3,8 @@ import { config, validateDatabaseConfig } from "../config/app-config.js";
 
 let pool;
 
+const connectionCharset = "utf8mb4_unicode_ci";
+
 export function getPool() {
   if (!pool) {
     validateDatabaseConfig();
@@ -17,7 +19,7 @@ export function getPool() {
       queueLimit: 0,
       decimalNumbers: true,
       dateStrings: true,
-      charset: "utf8mb4",
+      charset: connectionCharset,
       enableKeepAlive: true,
     });
   }

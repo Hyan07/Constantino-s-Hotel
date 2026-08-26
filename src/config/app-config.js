@@ -104,9 +104,6 @@ export function validateApplicationConfig() {
   if ((config.smtp.host || config.smtp.user || config.smtp.password) && !config.smtp.from) {
     errors.push("SMTP_FROM é obrigatório quando o SMTP está configurado.");
   }
-  if (config.env === "production" && (!config.smtp.host || !config.smtp.from)) {
-    errors.push("SMTP_HOST e SMTP_FROM são obrigatórios em produção para recuperação de senha.");
-  }
   if (config.env === "production" && !config.appUrl.startsWith("https://")) {
     errors.push("APP_URL deve usar HTTPS em produção.");
   }

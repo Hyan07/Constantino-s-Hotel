@@ -18,5 +18,7 @@ export function isValidCpf(value) {
 
 export function maskCpf(value) {
   if (!value) return "Não informado";
-  return "***.***.***-**";
+  const cpf = normalizeCpf(value);
+  if (cpf.length !== 11) return String(value);
+  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }

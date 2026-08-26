@@ -4,7 +4,7 @@ import { debounce, escapeHtml, initials } from "../utils/format.js";
 import { refreshIcons, showDrawer, showModal, toast } from "./ui.js";
 
 const navigation = [
-  { route: "dashboard", label: "Início", icon: "layout-dashboard", permission: "reservations.read" },
+  { route: "dashboard", label: "Visão Geral", icon: "layout-dashboard", permission: "reservations.read" },
   { route: "reservas", label: "Reservas", icon: "calendar-days", permission: "reservations.read" },
   { route: "hospedagens", label: "Hospedagens", icon: "bed-double", permission: "stays.read" },
   { route: "quartos", label: "Quartos", icon: "door-open", permission: "rooms.read" },
@@ -15,6 +15,15 @@ const navigation = [
 function navigate(route, params = {}) {
   const query = new URLSearchParams(params).toString();
   window.location.hash = `#/${route}${query ? `?${query}` : ""}`;
+}
+
+function currentDateLabel() {
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  }).format(new Date());
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function accountDrawer() {
@@ -80,75 +89,132 @@ function installSearch(root) {
   const wrapper = root.querySelector(".global-search");
   const input = wrapper.querySelector("input");
   const results = wrapper.querySelector(".search-results");
-  const search = debounce(async () => {
-    const q = input.value.trim();
-    if (q.length < 2) {
-      results.hidden = true;
-      return;
-    }
+  let searchSequence = 0;
+
+  const setResultsVisible = (visible) => {
+    results.hidden = !visible;
+    input.setAttribute("aria-expanded", String(visible));
+  };
+
+  const search = debounce(async (q, sequence) => {
     try {
       const items = await api.get("/api/search", { q });
+      if (sequence !== searchSequence || input.value.trim() !== q) return;
       results.innerHTML = items.length ? items.map((item) => `<button class="search-result" data-type="${item.type}" data-id="${item.id}">
-        <i data-lucide="${item.type === "guest" ? "user" : item.type === "room" ? "door-open" : "calendar"}"></i>
+        <i data-lucide="${item.type === "guest" ? "user" : item.type === "room" ? "door-open" : item.type === "stay" ? "bed-double" : "calendar"}"></i>
         <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.subtitle || "")}</span></span>
       </button>`).join("") : `<p class="muted">Nenhum resultado encontrado.</p>`;
-      results.hidden = false;
+      setResultsVisible(true);
       refreshIcons(results);
     } catch (error) {
+      if (sequence !== searchSequence || input.value.trim() !== q) return;
       results.innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
-      results.hidden = false;
+      setResultsVisible(true);
     }
   }, 280);
-  input.addEventListener("input", search);
+
+  input.addEventListener("input", () => {
+    const q = input.value.trim();
+    searchSequence += 1;
+    if (q.length < 2) {
+      setResultsVisible(false);
+      return;
+    }
+    search(q, searchSequence);
+  });
   input.addEventListener("focus", () => wrapper.classList.add("is-open"));
+  input.addEventListener("blur", () => {
+    if (!input.value.trim()) wrapper.classList.remove("is-open");
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" && !results.hidden) {
+      const first = results.querySelector("button");
+      if (first) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
+  results.addEventListener("keydown", (event) => {
+    const buttons = [...results.querySelectorAll("button")];
+    const index = buttons.indexOf(document.activeElement);
+    if (!buttons.length || index < 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      buttons[(index + 1) % buttons.length].focus();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      buttons[(index - 1 + buttons.length) % buttons.length].focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setResultsVisible(false);
+      input.focus();
+    }
+  });
   results.addEventListener("click", (event) => {
     const item = event.target.closest("[data-type]");
     if (!item) return;
-    const map = { guest: "hospedes", room: "quartos", reservation: "reservas" };
+    const map = { guest: "hospedes", room: "quartos", reservation: "reservas", stay: "hospedagens" };
     navigate(map[item.dataset.type], { open: item.dataset.id });
-    results.hidden = true;
+    setResultsVisible(false);
     input.value = "";
+    wrapper.classList.remove("is-open");
   });
   document.addEventListener("click", (event) => {
-    if (!wrapper.contains(event.target)) results.hidden = true;
+    if (!wrapper.contains(event.target)) {
+      setResultsVisible(false);
+      if (!input.value.trim()) wrapper.classList.remove("is-open");
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      wrapper.classList.add("is-open");
+      input.focus();
+      input.select();
+    }
+    if (event.key === "Escape" && document.activeElement === input) {
+      input.blur();
+      setResultsVisible(false);
+      wrapper.classList.remove("is-open");
+    }
   });
 }
 
 export function renderShell() {
   const { user, environment } = getState();
-  const collapsed = localStorage.getItem("constantinos.sidebar") === "collapsed";
   const nav = navigation.filter((item) => hasPermission(item.permission)).map((item) => `
-    <button class="nav-link" data-route="${item.route}" aria-label="${item.label}">
+    <button class="nav-link" data-route="${item.route}" aria-label="${item.label}" title="${item.label}">
       <i data-lucide="${item.icon}" aria-hidden="true"></i><span>${item.label}</span>
     </button>`).join("");
   const root = document.getElementById("app");
   root.className = "";
-  root.innerHTML = `<div class="app-layout${collapsed ? " is-collapsed" : ""}">
-    <aside class="sidebar">
-      <div class="sidebar__brand"><strong>Constantino's</strong><button class="icon-button sidebar__toggle" data-sidebar aria-label="Recolher menu"><i data-lucide="panel-left-close"></i></button></div>
+  root.innerHTML = `<div class="app-layout">
+    <aside class="sidebar" aria-label="Menu principal">
+      <div class="sidebar__brand"><strong>Constantino's Hotel</strong><button class="icon-button sidebar__toggle" data-mobile-sidebar-close aria-label="Fechar menu"><i data-lucide="panel-left-close"></i></button></div>
       <nav class="sidebar__nav" aria-label="Navegação principal">${nav}</nav>
-      <div class="sidebar__status"><strong>Sistema disponível</strong><span>${environment === "production" ? "Ambiente de produção" : "Ambiente local"}</span></div>
+      <div class="sidebar__status"><strong>Sistema disponível</strong><span>${environment === "production" ? "Ambiente de produção" : "Ambiente de desenvolvimento"}</span></div>
     </aside>
     <div class="mobile-backdrop" data-mobile-close></div>
     <header class="app-header">
-      <button class="icon-button mobile-menu-button" data-mobile-menu aria-label="Abrir menu"><i data-lucide="menu"></i></button>
-      <div class="header-greeting"><strong>Olá, ${escapeHtml(user.name.split(" ")[0])}</strong><span>Gestão do hotel</span></div>
+      <button class="icon-button mobile-menu-button" data-mobile-menu aria-label="Abrir menu" aria-expanded="false"><i data-lucide="menu"></i></button>
+      <div class="header-greeting"><strong>Olá, ${escapeHtml(user.name.split(" ")[0])}</strong><span>${escapeHtml(currentDateLabel())}</span></div>
       <div class="header-spacer"></div>
       <div class="global-search">
-        <input type="search" placeholder="Hóspede, quarto ou reserva" aria-label="Pesquisa global">
+        <input type="search" placeholder="Hóspede, quarto, reserva ou hospedagem" aria-label="Pesquisa global" aria-controls="global-search-results" aria-expanded="false" autocomplete="off">
         <i class="global-search__icon" data-lucide="search"></i>
-        <div class="search-results" hidden></div>
+        <div class="search-results" id="global-search-results" aria-live="polite" hidden></div>
       </div>
       <div class="header-actions">
         ${hasPermission("reservations.write") ? `<button class="header-action header-action--primary" data-new-reservation><i data-lucide="plus"></i><span>Nova reserva</span></button>` : ""}
         ${hasPermission("stays.write") ? `<button class="header-action" data-quick="checkin"><i data-lucide="log-in"></i><span>Check-in</span></button><button class="header-action" data-quick="checkout"><i data-lucide="log-out"></i><span>Check-out</span></button>` : ""}
       </div>
       <div class="avatar-wrap">
-        <button class="avatar-button" data-account aria-haspopup="menu" aria-expanded="false">${initials(user.name)}</button>
-        <div class="account-menu" role="menu" hidden>
-          <button data-profile><i data-lucide="user-round"></i>Minha conta</button>
-          <button data-password><i data-lucide="key-round"></i>Alterar senha</button>
-          <button data-logout><i data-lucide="log-out"></i>Sair</button>
+        <button class="avatar-button" data-account aria-haspopup="menu" aria-expanded="false" aria-controls="account-menu">${initials(user.name)}</button>
+        <div class="account-menu" id="account-menu" role="menu" hidden>
+          <button role="menuitem" data-profile><i data-lucide="user-round"></i>Minha conta</button>
+          <button role="menuitem" data-password><i data-lucide="key-round"></i>Alterar senha</button>
+          <button role="menuitem" data-logout><i data-lucide="log-out"></i>Sair</button>
         </div>
       </div>
     </header>
@@ -157,30 +223,71 @@ export function renderShell() {
   refreshIcons(root);
 
   const layout = root.querySelector(".app-layout");
-  root.querySelector("[data-sidebar]").addEventListener("click", () => {
-    layout.classList.toggle("is-collapsed");
-    localStorage.setItem("constantinos.sidebar", layout.classList.contains("is-collapsed") ? "collapsed" : "open");
+  const mobileMenuButton = root.querySelector("[data-mobile-menu]");
+  const closeMobileMenu = () => {
+    layout.classList.remove("is-mobile-open");
+    mobileMenuButton.setAttribute("aria-expanded", "false");
+  };
+  mobileMenuButton.addEventListener("click", () => {
+    const open = !layout.classList.contains("is-mobile-open");
+    layout.classList.toggle("is-mobile-open", open);
+    mobileMenuButton.setAttribute("aria-expanded", String(open));
   });
-  root.querySelector("[data-mobile-menu]").addEventListener("click", () => layout.classList.add("is-mobile-open"));
-  root.querySelector("[data-mobile-close]").addEventListener("click", () => layout.classList.remove("is-mobile-open"));
+  root.querySelector("[data-mobile-sidebar-close]").addEventListener("click", closeMobileMenu);
+  root.querySelector("[data-mobile-close]").addEventListener("click", closeMobileMenu);
   root.querySelector(".sidebar__nav").addEventListener("click", (event) => {
     const link = event.target.closest("[data-route]");
     if (!link) return;
     navigate(link.dataset.route);
-    layout.classList.remove("is-mobile-open");
+    closeMobileMenu();
+    if (event.detail > 0) link.blur();
   });
   root.querySelector("[data-new-reservation]")?.addEventListener("click", () => window.dispatchEvent(new CustomEvent("app:new-reservation")));
   root.querySelectorAll("[data-quick]").forEach((button) => button.addEventListener("click", () => navigate("hospedagens", { tab: button.dataset.quick })));
 
   const accountButton = root.querySelector("[data-account]");
   const accountMenu = root.querySelector(".account-menu");
-  accountButton.addEventListener("click", () => {
-    accountMenu.hidden = !accountMenu.hidden;
-    accountButton.setAttribute("aria-expanded", String(!accountMenu.hidden));
+  const setAccountMenu = (open, { focusFirst = false } = {}) => {
+    accountMenu.hidden = !open;
+    accountButton.setAttribute("aria-expanded", String(open));
+    if (open && focusFirst) accountMenu.querySelector("button")?.focus();
+  };
+  accountButton.addEventListener("click", () => setAccountMenu(accountMenu.hidden));
+  accountButton.addEventListener("keydown", (event) => {
+    if (["ArrowDown", "Enter", " "].includes(event.key) && accountMenu.hidden) {
+      event.preventDefault();
+      setAccountMenu(true, { focusFirst: true });
+    }
   });
-  root.querySelector("[data-profile]").addEventListener("click", accountDrawer);
-  root.querySelector("[data-password]").addEventListener("click", passwordModal);
+  accountMenu.addEventListener("keydown", (event) => {
+    const buttons = [...accountMenu.querySelectorAll("button")];
+    const index = buttons.indexOf(document.activeElement);
+    if (index < 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      buttons[(index + 1) % buttons.length].focus();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      buttons[(index - 1 + buttons.length) % buttons.length].focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setAccountMenu(false);
+      accountButton.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!root.querySelector(".avatar-wrap").contains(event.target)) setAccountMenu(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !accountMenu.hidden) {
+      setAccountMenu(false);
+      accountButton.focus();
+    }
+  });
+  root.querySelector("[data-profile]").addEventListener("click", () => { setAccountMenu(false); accountDrawer(); });
+  root.querySelector("[data-password]").addEventListener("click", () => { setAccountMenu(false); passwordModal(); });
   root.querySelector("[data-logout]").addEventListener("click", async () => {
+    setAccountMenu(false);
     try {
       await api.post("/api/auth/logout");
       window.location.assign("/login.html");

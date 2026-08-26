@@ -11,7 +11,9 @@ import { nonNegativeMoney, optionalString, positiveId } from "../validators/comm
 import { paginationMeta, parsePagination } from "../utils/pagination.js";
 import { canTransitionReservation } from "./reservation-status.js";
 
-const validStatuses = new Set(["pending", "confirmed", "awaiting_checkin", "checked_in", "completed", "cancelled", "no_show"]);
+const validStatuses = new Set(["pending", "confirmed", "checked_in", "cancelled", "no_show"]);
+const editableStatuses = new Set(["pending", "confirmed"]);
+const activeBookingStatuses = new Set(["pending", "confirmed"]);
 
 function code() {
   const now = new Date();
@@ -47,7 +49,7 @@ function baseData(input) {
     surcharge,
     source: optionalString(input.source, "Origem", { max: 80 }),
     notes: optionalString(input.notes, "Observações", { max: 5000 }),
-    status: ["pending", "confirmed", "awaiting_checkin"].includes(input.status) ? input.status : "confirmed",
+    status: editableStatuses.has(input.status) ? input.status : "pending",
   };
 }
 
@@ -137,7 +139,7 @@ export const reservationService = {
 
   async create(input, actor) {
     const data = baseData(input);
-    if (!["pending", "confirmed"].includes(data.status)) data.status = "confirmed";
+    if (!["pending", "confirmed"].includes(data.status)) data.status = "pending";
     return withTransaction(async (connection) => {
       const guest = await guestRepository.findById(data.guestId, connection);
       if (!guest || !guest.active) throw new AppError("GUEST_NOT_FOUND", "Hóspede não encontrado.", 404);
@@ -181,7 +183,7 @@ export const reservationService = {
     return withTransaction(async (connection) => {
       const current = await reservationRepository.findById(reservationId, connection, { forUpdate: true });
       if (!current) throw new AppError("RESERVATION_NOT_FOUND", "Reserva não encontrada.", 404);
-      if (!["pending", "confirmed", "awaiting_checkin"].includes(current.status)) {
+      if (!editableStatuses.has(current.status)) {
         throw new AppError("RESERVATION_NOT_EDITABLE", "Esta reserva não pode mais ser editada.", 409);
       }
       if (!canTransitionReservation(current.status, data.status)) {
@@ -198,19 +200,36 @@ export const reservationService = {
         action: "updated",
         fromStatus: current.status,
         toStatus: prepared.status,
-        description: current.room_id !== prepared.roomId ? "Quarto ou período da reserva alterado" : "Reserva atualizada",
-        metadata: { previousRoomId: current.room_id, roomId: prepared.roomId, checkIn: prepared.checkIn, checkOut: prepared.checkOut },
+        description: current.room_id !== prepared.roomId
+          ? "Quarto ou período da reserva alterado"
+          : "Reserva atualizada",
+        metadata: {
+          previousRoomId: current.room_id,
+          roomId: prepared.roomId,
+          checkIn: prepared.checkIn,
+          checkOut: prepared.checkOut,
+        },
         userId: actor.id,
       }, connection);
       if (current.room_id && current.room_id !== prepared.roomId && current.room_status === "reserved") {
         await roomRepository.updateStatus(current.room_id, "available", connection);
+      }
+      const updated = await reservationRepository.findById(reservationId, connection);
+      if (prepared.roomId && prepared.checkIn === toSqlDate() && activeBookingStatuses.has(prepared.status) && updated.room_status === "available") {
+        await roomRepository.updateStatus(prepared.roomId, "reserved", connection);
       }
       await auditRepository.log({
         userId: actor.id,
         entityType: "reservation",
         entityId: reservationId,
         action: "reservation_updated",
-        changes: { roomId: prepared.roomId, checkIn: prepared.checkIn, checkOut: prepared.checkOut },
+        changes: {
+          fromStatus: current.status,
+          toStatus: prepared.status,
+          roomId: prepared.roomId,
+          checkIn: prepared.checkIn,
+          checkOut: prepared.checkOut,
+        },
         ipAddress: actor.ipAddress,
       }, connection);
       return reservationRepository.findById(reservationId, connection);
@@ -247,7 +266,7 @@ export const reservationService = {
     return withTransaction(async (connection) => {
       const current = await reservationRepository.findById(reservationId, connection, { forUpdate: true });
       if (!current) throw new AppError("RESERVATION_NOT_FOUND", "Reserva não encontrada.", 404);
-      if (!canTransitionReservation(current.status, "no_show")) throw new AppError("INVALID_RESERVATION_STATUS", "Esta reserva não pode ser marcada como não compareceu.", 409);
+      if (!canTransitionReservation(current.status, "no_show")) throw new AppError("INVALID_RESERVATION_STATUS", "Apenas uma reserva confirmada pode ser marcada como não compareceu.", 409);
       if (toSqlDate() < current.check_in_date) throw new AppError("NO_SHOW_TOO_EARLY", "A reserva só pode ser marcada como não compareceu a partir da data de entrada.", 409);
       await reservationRepository.updateStatus(reservationId, "no_show", actor.id, connection);
       await reservationRepository.addHistory({ reservationId, action: "no_show", fromStatus: current.status, toStatus: "no_show", description: "Hóspede não compareceu", userId: actor.id }, connection);

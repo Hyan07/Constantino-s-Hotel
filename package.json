@@ -9,7 +9,7 @@
     "node": ">=22 <25"
   },
   "scripts": {
-   "build": "node -e \"console.log('Build concluido: Express servira a pasta public')\"",
+    "build": "node -e \"console.log('Build concluido: Express servira a pasta public')\"",
     "predev": "node scripts/migrate.js",
     "dev": "node --watch src/server.js",
     "prestart": "node scripts/migrate.js",
@@ -24,8 +24,6 @@
     "test:all": "npm run lint && npm test && npm run test:e2e",
     "check": "node scripts/check-project.js"
   },
-
-
   "dependencies": {
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
@@ -33,7 +31,7 @@
     "helmet": "^8.1.0",
     "lucide": "^0.468.0",
     "mysql2": "^3.14.4",
-    "nodemailer": "^7.0.5"
+    "nodemailer": "^9.0.5"
   },
   "devDependencies": {
     "eslint": "^9.33.0"

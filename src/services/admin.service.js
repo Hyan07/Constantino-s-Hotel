@@ -6,8 +6,10 @@ import { auditRepository } from "../repositories/audit.repository.js";
 import { hashPassword } from "../security/password.js";
 import { AppError } from "../utils/app-error.js";
 import { isValidCpf, maskCpf, normalizeCpf } from "../utils/cpf.js";
+import { isValidCnpjFormat, normalizeCnpj } from "../utils/cnpj.js";
 import { booleanValue, nonNegativeMoney, optionalString, positiveId, requiredString } from "../validators/common.js";
 import { paginationMeta, parsePagination } from "../utils/pagination.js";
+import { normalizeReservationSources, normalizeStayPrint } from "./configuration-options.js";
 
 function slug(value) {
   return String(value || "")
@@ -132,20 +134,35 @@ export const adminService = {
       if (!input.hotel || typeof input.hotel !== "object" || Array.isArray(input.hotel)) throw new AppError("VALIDATION_ERROR", "Os dados do hotel não são válidos.");
       const email = optionalString(input.hotel.email, "E-mail", { max: 190 });
       if (email && !/^\S+@\S+\.\S+$/.test(email)) throw new AppError("INVALID_EMAIL", "O e-mail do hotel não é válido.");
+      const cnpj = normalizeCnpj(input.hotel.cnpj);
+      if (cnpj && !isValidCnpjFormat(cnpj)) {
+        throw new AppError("INVALID_CNPJ", "O CNPJ deve possuir 14 posições; as 12 primeiras podem conter letras ou números e as duas últimas devem ser numéricas.");
+      }
       const checkInTime = String(input.hotel.checkInTime || "14:00");
-      const checkOutTime = String(input.hotel.checkOutTime || "11:00");
+      const checkOutTime = String(input.hotel.checkOutTime || "12:00");
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(checkInTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(checkOutTime)) throw new AppError("VALIDATION_ERROR", "Os horários de check-in e check-out devem usar HH:MM.");
       const timezone = requiredString(input.hotel.timezone || "America/Sao_Paulo", "Fuso horário", { max: 100 });
       try { new Intl.DateTimeFormat("pt-BR", { timeZone: timezone }).format(); } catch { throw new AppError("VALIDATION_ERROR", "O fuso horário informado não é válido."); }
       const currency = String(input.hotel.currency || "BRL").toUpperCase();
       if (!/^[A-Z]{3}$/.test(currency)) throw new AppError("VALIDATION_ERROR", "A moeda deve usar um código de três letras, como BRL.");
+      const cleaningEstimateMinutes = input.hotel.cleaningEstimateMinutes === undefined || input.hotel.cleaningEstimateMinutes === ""
+        ? null
+        : Number(input.hotel.cleaningEstimateMinutes);
+      if (cleaningEstimateMinutes !== null && (!Number.isInteger(cleaningEstimateMinutes) || cleaningEstimateMinutes < 1 || cleaningEstimateMinutes > 180)) {
+        throw new AppError("VALIDATION_ERROR", "O tempo estimado de limpeza deve ser de 1 a 180 minutos.");
+      }
       normalized.hotel = {
         name: requiredString(input.hotel.name, "Nome do hotel", { min: 2, max: 160 }),
+        legalName: optionalString(input.hotel.legalName, "Razão social", { max: 180 }) || "",
+        cnpj,
         phone: optionalString(input.hotel.phone, "Telefone", { max: 30 }) || "",
         email: email || "",
         address: optionalString(input.hotel.address, "Endereço", { max: 500 }) || "",
         checkInTime,
         checkOutTime,
+        cleaningEstimateMinutes,
+        hostingTerms: optionalString(input.hotel.hostingTerms, "Condições de hospedagem", { max: 5000 }) || "",
+        privacyNotice: optionalString(input.hotel.privacyNotice, "Aviso de privacidade", { max: 2000 }) || "",
         currency,
         timezone,
       };
@@ -154,6 +171,8 @@ export const adminService = {
       if (!Array.isArray(input.payment_methods) || input.payment_methods.length < 1 || input.payment_methods.length > 20) throw new AppError("VALIDATION_ERROR", "Informe de 1 a 20 formas de pagamento.");
       normalized.payment_methods = [...new Set(input.payment_methods.map((method) => requiredString(method, "Forma de pagamento", { max: 80 })))];
     }
+    if (input.reservation_sources !== undefined) normalized.reservation_sources = normalizeReservationSources(input.reservation_sources);
+    if (input.stay_print !== undefined) normalized.stay_print = normalizeStayPrint(input.stay_print);
     if (!Object.keys(normalized).length) throw new AppError("VALIDATION_ERROR", "Nenhuma configuração válida foi informada.");
     await withTransaction(async (connection) => {
       for (const [key, value] of Object.entries(normalized)) {

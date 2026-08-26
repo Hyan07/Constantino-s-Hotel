@@ -6,7 +6,10 @@ import { ok } from "../utils/http.js";
 
 export const authController = {
   async environment(_req, res) {
-    return ok(res, { environment: config.env });
+    return ok(res, {
+      environment: config.env,
+      passwordRecoveryEnabled: Boolean(config.smtp.host && config.smtp.from),
+    });
   },
 
   async login(req, res) {
