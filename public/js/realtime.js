@@ -25,7 +25,7 @@ function scheduleRefresh(detail) {
 
 function stopFallback() {
   if (!fallbackTimer) return;
-  clearInterval(fallbackTimer);
+  window.clearInterval(fallbackTimer);
   fallbackTimer = null;
 }
 

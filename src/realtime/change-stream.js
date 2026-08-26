@@ -14,7 +14,7 @@ function eventMessage(event, payload, id = null) {
 function removeClient(client) {
   if (!clients.has(client)) return;
   clients.delete(client);
-  clearInterval(client.heartbeat);
+  globalThis.clearInterval(client.heartbeat);
 }
 
 export function realtimeEvents(req, res) {
@@ -34,7 +34,7 @@ export function realtimeEvents(req, res) {
   res.write("retry: 3000\n\n");
   res.write(eventMessage("ready", { connected: true, at: new Date().toISOString() }));
 
-  client.heartbeat = setInterval(() => {
+  client.heartbeat = globalThis.setInterval(() => {
     if (res.destroyed || res.writableEnded) {
       removeClient(client);
       return;

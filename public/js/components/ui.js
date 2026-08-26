@@ -11,7 +11,13 @@ export function refreshIcons(root = document) {
 export function setMain(html) {
   const view = document.getElementById("main-view");
   const environment = getState().environment;
-  const banner = environment === "production" ? "" : `<div class="environment-banner">${environment === "staging" ? "AMBIENTE DEV · DADOS FICTÍCIOS" : "AMBIENTE LOCAL · NÃO USE DADOS REAIS"}</div>`;
+  const environmentLabels = {
+    development: "AMBIENTE LOCAL · NÃO USE DADOS REAIS",
+    staging: "AMBIENTE DEV · DADOS FICTÍCIOS",
+    test: "AMBIENTE DE TESTE · DADOS FICTÍCIOS",
+  };
+  const environmentLabel = environmentLabels[environment];
+  const banner = environmentLabel ? `<div class="environment-banner">${environmentLabel}</div>` : "";
   view.innerHTML = `${banner}${html}`;
   refreshIcons(view);
   view.focus?.();

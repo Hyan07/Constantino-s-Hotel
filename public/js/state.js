@@ -1,6 +1,6 @@
 const state = {
   user: null,
-  environment: "development",
+  environment: null,
   currentRoute: "dashboard",
 };
 
