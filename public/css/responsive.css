@@ -1,3 +1,6 @@
+.mobile-menu-button { display: none; }
+.sidebar__status span { display: none; }
+
 @media (max-width: 1180px) {
   .header-greeting { min-width: 145px; }
   .header-action:not(.header-action--primary) span { display: none; }
