@@ -59,14 +59,14 @@
 
         <form id="reset-form" class="auth-secondary-form" hidden novalidate>
           <h2>Criar nova senha</h2>
-          <p>Use pelo menos 12 caracteres, com maiúscula, minúscula, número e símbolo.</p>
+          <p>A senha deve conter exatamente 6 dígitos.</p>
           <div class="field">
             <label for="new-password">Nova senha</label>
-            <input id="new-password" name="password" type="password" autocomplete="new-password" required minlength="12">
+            <input id="new-password" name="password" type="password" autocomplete="new-password" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
           </div>
           <div class="field">
             <label for="confirm-password">Confirmar senha</label>
-            <input id="confirm-password" name="confirmation" type="password" autocomplete="new-password" required minlength="12">
+            <input id="confirm-password" name="confirmation" type="password" autocomplete="new-password" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required>
           </div>
           <div id="reset-feedback" class="form-alert" role="alert" hidden></div>
           <button class="button button--primary button--block" type="submit">Redefinir senha</button>
@@ -76,6 +76,6 @@
       <p class="login-footer">Constantino's Hotel · Passos, MG</p>
     </main>
     <script src="/vendor/lucide.min.js"></script>
-    <script type="module" src="/js/login.js"></script>
+    <script type="module" src="/js/login.js?v=20260827-2"></script>
   </body>
 </html>
