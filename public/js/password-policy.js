@@ -5,24 +5,31 @@ const NEW_PASSWORD_SELECTOR = [
 
 const POLICY_TEXT = "A senha deve conter exatamente 6 dígitos.";
 
+function renderToggleContent(button, showing) {
+  const label = showing ? "Ocultar senha" : "Mostrar senha";
+  const icon = showing ? "eye-off" : "eye";
+  button.innerHTML = `<i data-lucide="${icon}" aria-hidden="true"></i><span>${label}</span>`;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("title", label);
+  window.lucide?.createIcons({ attrs: { "stroke-width": 1.8 } });
+}
+
 function installVisibilityToggle(input) {
   if (!input.closest("#admin-form") || input.dataset.passwordToggleInstalled === "true") return;
   input.dataset.passwordToggleInstalled = "true";
 
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "link-button";
-  button.textContent = "Mostrar senha";
-  button.setAttribute("aria-label", "Mostrar senha");
-  button.setAttribute("title", "Mostrar senha");
+  button.className = "button button--secondary";
+  button.style.marginTop = "8px";
+  button.style.width = "fit-content";
+  renderToggleContent(button, false);
 
   button.addEventListener("click", () => {
-    const showing = input.type === "text";
-    input.type = showing ? "password" : "text";
-    const label = showing ? "Mostrar senha" : "Ocultar senha";
-    button.textContent = label;
-    button.setAttribute("aria-label", label);
-    button.setAttribute("title", label);
+    const willShow = input.type === "password";
+    input.type = willShow ? "text" : "password";
+    renderToggleContent(button, willShow);
+    input.focus();
   });
 
   input.insertAdjacentElement("afterend", button);
