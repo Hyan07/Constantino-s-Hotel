@@ -1,4 +1,5 @@
 import { api, ApiError } from "./api.js";
+import { installSixDigitPasswordPolicy } from "./password-policy.js?v=20260827-1";
 
 const loginForm = document.getElementById("login-form");
 const forgotForm = document.getElementById("forgot-form");
@@ -114,4 +115,5 @@ async function initialize() {
   } catch { /* O formulário continua disponível mesmo se o indicador falhar. */ }
 }
 
+installSixDigitPasswordPolicy();
 initialize();

@@ -7,12 +7,8 @@ const KEY_LENGTH = 64;
 
 export function validatePasswordStrength(password) {
   const value = String(password || "");
-  if (value.length < 12) throw new AppError("WEAK_PASSWORD", "A senha deve possuir pelo menos 12 caracteres.");
-  if (!/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/\d/.test(value) || !/[^\w\s]/.test(value)) {
-    throw new AppError(
-      "WEAK_PASSWORD",
-      "A senha deve conter letra maiúscula, letra minúscula, número e símbolo.",
-    );
+  if (!/^\d{6}$/.test(value)) {
+    throw new AppError("WEAK_PASSWORD", "A senha deve conter exatamente 6 dígitos.");
   }
 }
 

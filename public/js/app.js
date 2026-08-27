@@ -7,6 +7,7 @@ import { installReservationReopen } from "./components/reservation-reopen.js?v=2
 import { installReservationSourceEnhancer } from "./components/reservation-source-enhancer.js";
 import { installReservationWizardEnhancer } from "./components/reservation-wizard-enhancer.js?v=20260817-1";
 import { installStayPrintEnhancer } from "./components/stay-print-enhancer.js";
+import { installSixDigitPasswordPolicy } from "./password-policy.js?v=20260827-1";
 import { startRealtimeSync } from "./realtime.js?v=20260824-1";
 import { setState } from "./state.js";
 import { startRouter } from "./router.js";
@@ -68,4 +69,5 @@ async function boot() {
   }
 }
 
+installSixDigitPasswordPolicy();
 boot();
