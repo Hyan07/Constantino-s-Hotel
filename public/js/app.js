@@ -1,5 +1,6 @@
 import { api } from "./api.js";
 import { renderShell } from "./components/shell.js";
+import { installAdminMaintenance } from "./components/admin-maintenance.js?v=20260827-1";
 import { installConfigurationPanels } from "./components/configuration-panels.js";
 import { installPrintActionFix } from "./components/print-action-fix.js";
 import { installReservationFlowEnhancer } from "./components/reservation-flow-enhancer.js?v=20260824-2";
@@ -50,6 +51,7 @@ async function boot() {
     const session = await api.get("/api/auth/session");
     setState(session);
     renderShell();
+    installAdminMaintenance();
     installConfigurationPanels();
     installPrintActionFix();
     installReservationReopen();

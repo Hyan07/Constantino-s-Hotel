@@ -19,4 +19,7 @@ router.put("/settings", admin, asyncHandler(adminController.updateSettings));
 router.get("/audit", requirePermission("audit.read"), asyncHandler(adminController.audit));
 router.post("/rooms", admin, asyncHandler(adminController.createRoom));
 router.put("/rooms/:id", admin, asyncHandler(adminController.updateRoom));
+router.put("/maintenance/:type/:id", admin, asyncHandler(adminController.maintenanceEdit));
+router.delete("/maintenance/:type/:id", admin, asyncHandler(adminController.maintenanceDelete));
+router.post("/maintenance/reservation/:id/cancel", admin, asyncHandler(adminController.maintenanceCancelReservation));
 export default router;
