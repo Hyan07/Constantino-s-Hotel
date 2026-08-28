@@ -104,7 +104,8 @@ export const adminRepository = {
       params,
     );
     const [rows] = await getPool().execute(
-      `SELECT al.*, u.name AS user_name FROM audit_logs al LEFT JOIN users u ON u.id=al.user_id
+      `SELECT al.*, CONVERT_TZ(al.created_at, '+00:00', '-03:00') AS created_at, u.name AS user_name
+       FROM audit_logs al LEFT JOIN users u ON u.id=al.user_id
        ${where} ORDER BY al.created_at DESC, al.id DESC LIMIT ? OFFSET ?`,
       [...params, pageSize, offset],
     );
